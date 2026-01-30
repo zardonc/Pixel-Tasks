@@ -1,0 +1,30 @@
+@import "tailwindcss";
+@config "./tailwind.config.js";
+
+@layer base {
+  body {
+    @apply font-pixel bg-background-light dark:bg-background-dark text-gray-900 dark:text-gray-100 transition-colors duration-200;
+    overscroll-behavior-y: none;
+    -webkit-font-smoothing: none;
+    image-rendering: pixelated;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-left: 2px solid #000;
+}
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border: 2px solid #000;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+.pixel-antialiasing {
+  image-rendering: pixelated;
+}
