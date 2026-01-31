@@ -123,6 +123,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, onAddTask }) => {
          {children}
 
          {/* Floating Add Task Button (Desktop & Mobile) */}
+         {location.pathname === '/' && (
          <div className="fixed bottom-8 right-8 z-30">
             <button 
                 onClick={onAddTask}
@@ -131,6 +132,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, onAddTask }) => {
                 <Plus size={32} strokeWidth={3} className="group-hover:rotate-90 transition-transform duration-300"/>
             </button>
         </div>
+        )}
       </main>
 
     </div>
