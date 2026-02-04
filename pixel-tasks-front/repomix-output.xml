@@ -40,7 +40,6 @@ The content is organized as follows:
 </file_summary>
 
 <directory_structure>
-.gitignore
 App.tsx
 components/Layout.tsx
 components/ui/PixelComponents.tsx
@@ -54,6 +53,7 @@ pages/Achievements.tsx
 pages/CharacterCreation.tsx
 pages/Dashboard.tsx
 pages/GameHub.tsx
+pages/NotFound.tsx
 pages/Shop.tsx
 postcss.config.js
 README.md
@@ -67,33 +67,6 @@ vite.config.ts
 <files>
 This section contains the contents of the repository's files.
 
-<file path=".gitignore">
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-
-node_modules
-dist
-dist-ssr
-*.local
-
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-</file>
-
 <file path="App.tsx">
 import React, { useState } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
@@ -104,6 +77,7 @@ import { Dashboard } from './pages/Dashboard';
 import { GameHub } from './pages/GameHub';
 import { Shop } from './pages/Shop';
 import { Achievements } from './pages/Achievements';
+import { NotFound } from './pages/NotFound';
 
 const App: React.FC = () => {
   const user = useStore(state => state.user);
@@ -130,7 +104,7 @@ const App: React.FC = () => {
                     <Route path="/gamehub" element={<GameHub />} />
                     <Route path="/shop" element={<Shop />} />
                     <Route path="/achievements" element={<Achievements />} />
-                    <Route path="*" element={<Navigate to="/" replace />} />
+                    <Route path="*" element={<NotFound />} />
                   </Routes>
                 </Layout>
               ) : (
@@ -273,6 +247,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, onAddTask }) => {
          {children}
 
          {/* Floating Add Task Button (Desktop & Mobile) */}
+         {location.pathname === '/' && (
          <div className="fixed bottom-8 right-8 z-30">
             <button 
                 onClick={onAddTask}
@@ -281,6 +256,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, onAddTask }) => {
                 <Plus size={32} strokeWidth={3} className="group-hover:rotate-90 transition-transform duration-300"/>
             </button>
         </div>
+        )}
       </main>
 
     </div>
@@ -2162,6 +2138,53 @@ const StatCard = ({ label, value, icon, color }: any) => (
         </div>
     </div>
 );
+</file>
+
+<file path="pages/NotFound.tsx">
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { PixelCard, PixelButton } from '../components/ui/PixelComponents';
+import { HelpCircle, Home } from 'lucide-react';
+
+export const NotFound: React.FC = () => {
+  const navigate = useNavigate();
+
+  return (
+    <div className="min-h-screen flex items-center justify-center p-4 bg-background-light dark:bg-background-dark">
+      <PixelCard className="max-w-md w-full text-center space-y-6">
+        <div className="flex justify-center mb-6">
+          <div className="relative">
+            <span className="text-8xl filter drop-shadow-sm select-none animate-bounce block">
+              🐶
+            </span>
+            <div className="absolute -top-4 -right-4 bg-red-100 dark:bg-red-900 border-2 border-black rounded-full p-2 animate-pulse">
+                <HelpCircle size={32} className="text-red-600 dark:text-red-400" />
+            </div>
+          </div>
+        </div>
+        
+        <div className="space-y-2">
+          <h1 className="text-6xl font-bold text-primary mb-2">404</h1>
+          <h2 className="text-2xl font-bold uppercase">Page Not Found</h2>
+          <p className="text-gray-600 dark:text-gray-300 text-lg">
+            Uh oh! It looks like you've wandered into unmapped territory.
+          </p>
+        </div>
+
+        <div className="pt-4">
+          <PixelButton 
+            onClick={() => navigate('/')} 
+            fullWidth 
+            variant="primary"
+          >
+            <Home size={20} />
+            Return Home
+          </PixelButton>
+        </div>
+      </PixelCard>
+    </div>
+  );
+};
 </file>
 
 <file path="pages/Shop.tsx">

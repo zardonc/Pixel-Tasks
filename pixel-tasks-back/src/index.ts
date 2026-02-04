@@ -1,17 +1,30 @@
-import { createClient } from '@supabase/supabase-js';
-import dotenv from 'dotenv';
+import { serve } from '@hono/node-server';
+import { Hono } from 'hono';
+import { logger } from 'hono/logger';
+import { cors } from 'hono/cors';
 
-dotenv.config();
+const app = new Hono();
 
-console.log("Pixel Tasks Backend Initialized");
+// Global Middlewares
+app.use('*', logger());
+app.use('*', cors());
 
-// Example Supabase Client initialization (Environment variables needed)
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_ANON_KEY;
+// Health Check
+app.get('/health', (c) => {
+  return c.json({ status: 'ok', service: 'pixel-tasks-back' });
+});
 
-if (supabaseUrl && supabaseKey) {
-    const supabase = createClient(supabaseUrl, supabaseKey);
-    console.log("Supabase Client Configured");
-} else {
-    console.log("Supabase credentials not found in .env");
-}
+// Root
+app.get('/', (c) => {
+  return c.text('Pixel Tasks Backend is running (Phase 1)');
+});
+
+const port = 3000;
+console.log(`Server is running on port ${port}`);
+
+serve({
+  fetch: app.fetch,
+  port
+});
+
+export default app;
