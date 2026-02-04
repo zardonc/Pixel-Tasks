@@ -25,6 +25,7 @@
     "jsonwebtoken": "^9.0.3",
     "postgres": "^3.4.8",
     "ts-node": "^10.9.2",
+    "tsid": "^1.0.0",
     "typescript": "^5.9.3",
     "uuid": "^13.0.0"
   },

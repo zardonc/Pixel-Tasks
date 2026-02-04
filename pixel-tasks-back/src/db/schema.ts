@@ -3,7 +3,7 @@ import { sql } from 'drizzle-orm';
 
 // Users Table
 export const users = sqliteTable('users', {
-  id: text('id').primaryKey(), // UUID
+  id: text('id').primaryKey(), // TSID
   email: text('email').notNull().unique(),
   passwordHash: text('password_hash').notNull(),
   role: text('role', { enum: ['USER', 'ADMIN'] }).default('USER').notNull(),

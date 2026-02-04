@@ -1,11 +1,11 @@
 import { db } from './src/db/index.js';
 import { users } from './src/db/schema.js';
-import { v4 as uuidv4 } from 'uuid';
+import TSID from 'tsid';
 
 async function verify() {
   try {
-    const id = uuidv4();
-    console.log(`Inserting user with ID: ${id}`);
+    const id = TSID.next();
+    console.log(`Inserting user with TSID: ${id}`);
     
     await db.insert(users).values({
       id,
