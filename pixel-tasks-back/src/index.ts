@@ -4,6 +4,7 @@ import { logger } from 'hono/logger';
 import { cors } from 'hono/cors';
 
 import auth from './modules/auth/auth.controller.js';
+import user from './modules/user/user.controller.js';
 
 const app = new Hono();
 
@@ -13,6 +14,7 @@ app.use('*', cors());
 
 // Routes
 app.route('/auth', auth);
+app.route('/user', user);
 
 // Health Check
 app.get('/health', (c) => {
