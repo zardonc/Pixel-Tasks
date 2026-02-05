@@ -16,6 +16,12 @@ app.use('*', cors());
 app.route('/auth', auth);
 app.route('/user', user);
 
+// Tasks
+import { taskController } from './modules/tasks/task.controller.js';
+import { authMiddleware } from './middlewares/auth.js';
+app.use('/tasks/*', authMiddleware);
+app.route('/tasks', taskController);
+
 // Health Check
 app.get('/health', (c) => {
   return c.json({ status: 'ok', service: 'pixel-tasks-back' });

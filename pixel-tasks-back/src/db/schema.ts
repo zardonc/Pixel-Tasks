@@ -31,3 +31,34 @@ export const pointsLog = sqliteTable('points_log', {
   
   createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`(strftime('%s', 'now'))`),
 });
+
+// Lists Table
+export const lists = sqliteTable('lists', {
+  id: text('id').primaryKey(), // TSID
+  userId: text('user_id').notNull().references(() => users.id),
+  
+  name: text('name').notNull(),
+  color: text('color').default('#FFFFFF'),
+  icon: text('icon').default('list'),
+  
+  createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`(strftime('%s', 'now'))`),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).default(sql`(strftime('%s', 'now'))`),
+});
+
+// Tasks Table
+export const tasks = sqliteTable('tasks', {
+  id: text('id').primaryKey(), // TSID
+  listId: text('list_id').references(() => lists.id),
+  userId: text('user_id').notNull().references(() => users.id),
+  
+  title: text('title').notNull(),
+  description: text('description'),
+  
+  status: text('status', { enum: ['TODO', 'DONE'] }).default('TODO').notNull(),
+  difficulty: text('difficulty', { enum: ['EASY', 'MEDIUM', 'HARD'] }).default('EASY').notNull(),
+  
+  completedAt: integer('completed_at', { mode: 'timestamp' }),
+  
+  createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`(strftime('%s', 'now'))`),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).default(sql`(strftime('%s', 'now'))`),
+});
