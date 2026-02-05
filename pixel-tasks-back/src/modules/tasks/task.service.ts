@@ -15,7 +15,8 @@ export class TaskService {
   }
 
   async createTask(userId: string, title: string, listId?: string, difficulty: 'EASY' | 'MEDIUM' | 'HARD' = 'EASY') {
-    const taskId = new TSID().toString();
+    const taskId = TSID.next();
+    console.log(`[TaskService] Creating task with ID: ${taskId} for user: ${userId}`);
     const [newTask] = await db
       .insert(tasks)
       .values({

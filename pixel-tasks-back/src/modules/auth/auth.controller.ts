@@ -27,9 +27,10 @@ auth.post('/login', async (c) => {
 });
 
 // Me (Protected)
-auth.get('/me', authMiddleware, (c) => {
-  const user = c.get('user');
-  return c.json({ user });
+auth.get('/me', authMiddleware, async (c) => {
+  const userPayload = c.get('user');
+  const user = await authService.getProfile(userPayload.id);
+  return c.json(user); // Returns flat user object directly
 });
 
 export default auth;

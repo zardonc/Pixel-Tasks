@@ -42,7 +42,21 @@ taskController.post('/:id/complete', async (c) => {
     return c.json({ error: 'Task not found' }, 404);
   }
   
-  // TODO: Trigger XP Engine here
+  // Trigger XP Engine
+  try {
+    const { gamificationService } = await import('../gamification/gamification.service.js');
+    const { EventType } = await import('../gamification/rules/BaseRule.js');
+    
+    await gamificationService.processEvent(
+      user.id,
+      EventType.TASK_COMPLETE,
+      { taskId: task.id, difficulty: task.difficulty },
+      task.id // Use taskId as eventId to prevent double-dipping for the same task
+    );
+  } catch (err) {
+    console.error('[TaskController] Failed to process gamification event:', err);
+    // Don't fail the request if gamification fails
+  }
   
   return c.json(task);
 });

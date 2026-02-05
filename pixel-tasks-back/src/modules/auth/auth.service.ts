@@ -45,7 +45,7 @@ class AuthService {
 
     return {
       token: this.generateToken(newUser),
-      user: { id: newUser.id, email: newUser.email, role: newUser.role }
+      user: { id: newUser.id, email: newUser.email, role: newUser.role, points: newUser.points }
     };
   }
 
@@ -58,8 +58,14 @@ class AuthService {
 
     return {
       token: this.generateToken(user),
-      user: { id: user.id, email: user.email, role: user.role }
+      user: { id: user.id, email: user.email, role: user.role, points: user.points }
     };
+  }
+
+  async getProfile(userId: string) {
+    const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+    if (!user) return null;
+    return { id: user.id, email: user.email, role: user.role, points: user.points, level: user.level };
   }
 }
 
