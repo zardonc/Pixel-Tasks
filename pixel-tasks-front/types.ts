@@ -31,13 +31,21 @@ export interface Task {
 }
 
 export interface User {
-  name: string;
+  id: string;
   email: string;
-  companion: CompanionType;
+  role: 'USER' | 'ADMIN';
+  points: number;
   level: number;
-  xp: number;
-  maxXp: number;
-  coins: number;
+  // Frontend specific (optional for now)
+  name?: string;
+  companion?: CompanionType;
+  maxXp?: number;
+  coins?: number;
+}
+
+export interface AuthResponse {
+  token: string;
+  user: User;
 }
 
 export interface ShopItem {

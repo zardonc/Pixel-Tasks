@@ -10,6 +10,7 @@ interface AppState {
   isDarkMode: boolean;
   
   // Actions
+  setUser: (user: User | null) => void; // New Action to sync with AuthContext
   login: (name: string, email: string, companion: CompanionType) => void;
   logout: () => void;
   addTask: (task: Task) => void;
@@ -83,13 +84,17 @@ export const useStore = create<AppState>((set) => ({
   achievements: INITIAL_ACHIEVEMENTS,
   isDarkMode: false,
 
+  setUser: (user) => set({ user }),
+
   login: (name, email, companion) => set({
     user: {
       name,
       email,
       companion,
       level: 5,
-      xp: 1250,
+      role: 'USER',
+      id: 'local-id',
+      points: 1250,
       maxXp: 2000,
       coins: 500
     }
@@ -165,10 +170,10 @@ export const useStore = create<AppState>((set) => ({
 
   buyItem: (id) => set((state) => {
     const item = state.shopItems.find(i => i.id === id);
-    if (!item || !state.user || state.user.xp < item.cost) return state;
+    if (!item || !state.user || state.user.points < item.cost) return state;
 
     return {
-        user: { ...state.user, xp: state.user.xp - item.cost },
+        user: { ...state.user, points: state.user.points - item.cost },
         shopItems: state.shopItems.map(i => i.id === id ? { ...i, owned: true } : i)
     };
   }),
@@ -192,19 +197,22 @@ export const useStore = create<AppState>((set) => ({
 
   addXp: (amount) => set((state) => {
       if(!state.user) return state;
-      const newXp = state.user.xp + amount;
+      const currentPoints = state.user.points || 0;
+      const currentMax = state.user.maxXp || 1000;
+      const newPoints = currentPoints + amount;
+      
       // Simple level up logic
-      if (newXp >= state.user.maxXp) {
+      if (newPoints >= currentMax) {
           return {
               user: {
                   ...state.user,
                   level: state.user.level + 1,
-                  xp: newXp - state.user.maxXp,
-                  maxXp: Math.floor(state.user.maxXp * 1.2)
+                  points: newPoints - currentMax,
+                  maxXp: Math.floor(currentMax * 1.2)
               }
           }
       }
-      return { user: { ...state.user, xp: newXp } }
+      return { user: { ...state.user, points: newPoints } }
   }),
 
   claimAchievement: (id) => set((state) => {
@@ -213,15 +221,17 @@ export const useStore = create<AppState>((set) => ({
 
       // Logic to add XP (duplicated from addXp to run atomically inside this action)
       const amount = ach.reward;
-      const newXp = state.user.xp + amount;
-      let newUser = { ...state.user, xp: newXp };
+      const currentPoints = state.user.points || 0;
+      const currentMax = state.user.maxXp || 1000;
+      const newPoints = currentPoints + amount;
+      let newUser = { ...state.user, points: newPoints };
 
-      if (newXp >= state.user.maxXp) {
+      if (newPoints >= currentMax) {
            newUser = {
                ...newUser,
                level: newUser.level + 1,
-               xp: newXp - newUser.maxXp,
-               maxXp: Math.floor(newUser.maxXp * 1.2)
+               points: newPoints - currentMax,
+               maxXp: Math.floor(currentMax * 1.2)
            };
       }
 
