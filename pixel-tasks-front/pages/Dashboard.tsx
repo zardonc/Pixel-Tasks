@@ -15,7 +15,7 @@ interface DashboardProps {
 type SortCriteria = 'DATE' | 'DEADLINE' | 'PRIORITY' | 'TITLE';
 
 export const Dashboard: React.FC<DashboardProps> = ({ isEditorOpen, onCloseEditor }) => {
-  const { user, tasks, toggleTask, addTask, deleteTask, updateTask, customLists, addList, renameList, deleteList, deleteCompletedTasks } = useStore();
+  const { user, tasks, toggleTask, addTask, deleteTask, updateTask, customLists, addList, renameList, deleteList, deleteCompletedTasks, fetchTasks } = useStore();
   
   // Default List Name
   const defaultListName = user ? `${user.name}'s List` : "Hero's List";
@@ -55,6 +55,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ isEditorOpen, onCloseEdito
           setSelectedList(defaultListName);
       }
   }, [isEditorOpen, defaultListName]);
+
+  // Fetch Tasks on Mount
+  useEffect(() => {
+      if (user) {
+         fetchTasks();
+      }
+  }, [user]);
   
   // Date Picker State
   const [isDatePickerOpen, setDatePickerOpen] = useState(false);

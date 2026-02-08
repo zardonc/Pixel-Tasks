@@ -58,8 +58,16 @@ export const tasks = sqliteTable('tasks', {
   title: text('title').notNull(),
   description: text('description'),
   
-  status: text('status', { enum: ['TODO', 'DONE'] }).default('TODO').notNull(),
-  difficulty: text('difficulty', { enum: ['EASY', 'MEDIUM', 'HARD'] }).default('EASY').notNull(),
+  // Frontend alignment
+  status: text('status', { enum: ['TODO', 'DONE'] }).default('TODO').notNull(), 
+  priority: text('priority', { enum: ['LOW', 'MEDIUM', 'HIGH'] }).default('MEDIUM').notNull(),
+  category: text('category', { enum: ['WORK', 'HEALTH', 'FUN', 'CHORE'] }).default('CHORE').notNull(),
+  
+  xpReward: integer('xp_reward').default(100).notNull(),
+  isDaily: integer('is_daily', { mode: 'boolean' }).default(false).notNull(),
+  
+  dueDate: text('due_date'), 
+  list: text('list'), 
   
   completedAt: integer('completed_at', { mode: 'timestamp' }),
   

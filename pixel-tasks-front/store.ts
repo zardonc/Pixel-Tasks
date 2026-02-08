@@ -1,5 +1,4 @@
-import { create } from 'zustand';
-import { Task, User, CompanionType, ShopItem, Achievement, TaskCategory, TaskPriority } from './types';
+import { taskService } from './services/task.service';
 
 interface AppState {
   user: User | null;
@@ -10,58 +9,27 @@ interface AppState {
   isDarkMode: boolean;
   
   // Actions
-  setUser: (user: User | null) => void; // New Action to sync with AuthContext
+  setUser: (user: User | null) => void; 
   login: (name: string, email: string, companion: CompanionType) => void;
   logout: () => void;
-  addTask: (task: Task) => void;
+  
+  fetchTasks: () => Promise<void>; // New
+  addTask: (task: Partial<Task>) => Promise<void>; // Updated signature
   addList: (name: string) => void;
-  renameList: (oldName: string, newName: string) => void; // New
-  deleteList: (name: string) => void; // New
-  deleteCompletedTasks: (listFilter: string) => void; // New
-  toggleTask: (id: string) => void;
-  deleteTask: (id: string) => void;
-  updateTask: (task: Task) => void;
+  renameList: (oldName: string, newName: string) => void; 
+  deleteList: (name: string) => void; 
+  deleteCompletedTasks: (listFilter: string) => void; 
+  toggleTask: (id: string) => Promise<void>; // Async
+  deleteTask: (id: string) => Promise<void>; // Async
+  updateTask: (task: Task) => Promise<void>; // Async
   buyItem: (id: string) => void;
   equipItem: (id: string) => void;
   toggleDarkMode: () => void;
   addXp: (amount: number) => void;
-  claimAchievement: (id: string) => void; // New Action
+  claimAchievement: (id: string) => void; 
 }
 
-const INITIAL_TASKS: Task[] = [
-  {
-    id: '1',
-    title: 'Walk the Dog',
-    description: "Don't forget the frisbee!",
-    category: TaskCategory.HEALTH,
-    priority: TaskPriority.MEDIUM,
-    xpReward: 150,
-    completed: false,
-    dueDate: new Date().toISOString(),
-    isDaily: true,
-  },
-  {
-    id: '2',
-    title: 'Complete Project UI',
-    description: "Finish the pixel art dashboard design.",
-    category: TaskCategory.WORK,
-    priority: TaskPriority.HIGH,
-    xpReward: 500,
-    completed: false,
-    dueDate: new Date().toISOString(),
-  },
-  {
-    id: '3',
-    title: 'Water Plants',
-    description: "The monstera needs some love.",
-    category: TaskCategory.CHORE,
-    priority: TaskPriority.LOW,
-    xpReward: 100,
-    completed: false,
-    dueDate: new Date(Date.now() + 86400000).toISOString(),
-    list: 'Backlog'
-  },
-];
+const INITIAL_TASKS: Task[] = [];
 
 const INITIAL_SHOP_ITEMS: ShopItem[] = [
   { id: '1', name: 'No Frame', type: 'FRAME', cost: 0, image: '', owned: true, equipped: true },
@@ -76,7 +44,7 @@ const INITIAL_ACHIEVEMENTS: Achievement[] = [
   { id: '3', title: 'Streak Master', description: 'Maintain a 7-day login streak.', status: 'IN_PROGRESS', progress: 5, maxProgress: 7, reward: 500, icon: 'fire' },
 ];
 
-export const useStore = create<AppState>((set) => ({
+export const useStore = create<AppState>((set, get) => ({
   user: null, // Start null to show login
   tasks: INITIAL_TASKS,
   customLists: ['Backlog', 'Shopping'], // Initial custom lists
@@ -102,8 +70,24 @@ export const useStore = create<AppState>((set) => ({
 
   logout: () => set({ user: null }),
 
-  addTask: (task) => set((state) => ({ tasks: [...state.tasks, task] })),
+  addTask: async (task) => {
+      try {
+          const newTask = await taskService.createTask(task);
+          set((state) => ({ tasks: [...state.tasks, newTask] }));
+      } catch (error) {
+          console.error('Failed to add task:', error);
+      }
+  },
   
+  fetchTasks: async () => {
+      try {
+          const tasks = await taskService.getTasks();
+          set({ tasks });
+      } catch (error) {
+          console.error('Failed to fetch tasks:', error);
+      }
+  },
+
   addList: (name) => set((state) => {
       if (state.customLists.includes(name)) return state;
       return { customLists: [...state.customLists, name] };
@@ -144,29 +128,65 @@ export const useStore = create<AppState>((set) => ({
       })
   })),
 
-  toggleTask: (id) => set((state) => {
-    const task = state.tasks.find(t => t.id === id);
-    const wasCompleted = task?.completed;
-    
-    // Add XP if completing
-    if (task && !wasCompleted) {
-        state.addXp(task.xpReward);
+  toggleTask: async (id) => {
+    const task = get().tasks.find(t => t.id === id);
+    if (!task) return;
+
+    // Optimistic Update
+    set((state) => ({
+        tasks: state.tasks.map((t) => t.id === id ? { ...t, completed: !t.completed } : t),
+    }));
+
+    try {
+        if (!task.completed) {
+            // Complete it
+            const response = await taskService.completeTask(id);
+            // Sync state with backend result (server might add points etc)
+            set((state) => {
+                 // Update user points/level from response
+                 const updatedUser = state.user ? { ...state.user, points: response.points, level: response.level, version: (state.user as any).version + 1 } : state.user;
+                 return {
+                     user: updatedUser,
+                     tasks: state.tasks.map((t) => t.id === id ? response.task : t) // Replace with server task state
+                 };
+            });
+        } else {
+             // Re-open it (Not fully implemented on backend yet for un-complete, so we just update status locally or re-fetch)
+             // For now assuming we just patch it.
+             await taskService.updateTask(id, { completed: false });
+        }
+    } catch (error) {
+        console.error('Failed to toggle task:', error);
+        // Revert on error
+         set((state) => ({
+            tasks: state.tasks.map((t) => t.id === id ? { ...t, completed: task.completed } : t),
+        }));
     }
+  },
 
-    return {
-      tasks: state.tasks.map((t) =>
-        t.id === id ? { ...t, completed: !t.completed } : t
-      ),
-    };
-  }),
+  deleteTask: async (id) => {
+      // Optimistic
+      const oldTasks = get().tasks;
+      set((state) => ({ tasks: state.tasks.filter((t) => t.id !== id) }));
+      try {
+        await taskService.deleteTask(id);
+      } catch (error) {
+        console.error('Failed to delete task:', error);
+        set({ tasks: oldTasks });
+      }
+  },
 
-  deleteTask: (id) => set((state) => ({
-    tasks: state.tasks.filter((t) => t.id !== id)
-  })),
-
-  updateTask: (updatedTask) => set((state) => ({
-    tasks: state.tasks.map((t) => t.id === updatedTask.id ? updatedTask : t)
-  })),
+  updateTask: async (updatedTask) => {
+      // Optimistic
+      set((state) => ({
+        tasks: state.tasks.map((t) => t.id === updatedTask.id ? updatedTask : t)
+      }));
+      try {
+        await taskService.updateTask(updatedTask.id, updatedTask);
+      } catch (error) {
+          console.error("Failed to update task", error);
+      }
+  },
 
   buyItem: (id) => set((state) => {
     const item = state.shopItems.find(i => i.id === id);

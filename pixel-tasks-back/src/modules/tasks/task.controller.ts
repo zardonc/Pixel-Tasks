@@ -29,8 +29,24 @@ taskController.get('/', async (c) => {
 taskController.post('/', async (c) => {
   const user = c.get('user');
   const body = await c.req.json();
-  const task = await taskService.createTask(user.id, body.title, body.listId, body.difficulty);
+  // Body should match TaskService expectation
+  const task = await taskService.createTask(user.id, body);
   return c.json(task, 201);
+});
+
+taskController.patch('/:id', async (c) => {
+  const user = c.get('user');
+  const taskId = c.req.param('id');
+  const body = await c.req.json();
+  const task = await taskService.updateTask(user.id, taskId, body);
+  return c.json(task);
+});
+
+taskController.delete('/:id', async (c) => {
+  const user = c.get('user');
+  const taskId = c.req.param('id');
+  await taskService.deleteTask(user.id, taskId);
+  return c.json({ success: true });
 });
 
 taskController.post('/:id/complete', async (c) => {
@@ -50,13 +66,20 @@ taskController.post('/:id/complete', async (c) => {
     await gamificationService.processEvent(
       user.id,
       EventType.TASK_COMPLETE,
-      { taskId: task.id, difficulty: task.difficulty },
-      task.id // Use taskId as eventId to prevent double-dipping for the same task
+      { taskId: task.id, difficulty: task.priority }, // Map priority to difficulty rule
+      task.id 
     );
   } catch (err) {
     console.error('[TaskController] Failed to process gamification event:', err);
-    // Don't fail the request if gamification fails
   }
   
-  return c.json(task);
+  // Re-fetch user to get updated points/level
+  const { authService } = await import('../auth/auth.service.js');
+  const updatedUser = await authService.getProfile(user.id);
+
+  return c.json({ 
+    task, 
+    points: updatedUser?.points || 0, 
+    level: updatedUser?.level || 1 
+  });
 });
