@@ -1,6 +1,6 @@
 import { db } from '../../db/index.js';
 import { users, pointsLog } from '../../db/schema.js';
-import { eq, sql } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import TSID from 'tsid';
 import { xpEngine } from './XPEngine.js';
 import { EventType, type GamificationEvent } from './rules/BaseRule.js';
@@ -46,24 +46,33 @@ export class GamificationService {
         pointsDelta,
       });
 
-      // Update User (Atomic Increment with Version Check - simplified here to direct update)
-      // Drizzle doesn't support 'returning' well with SQLite + SQL templates in all drivers, 
-      // but acceptable for this stack.
+      // Fetch current user state for calculation
+      const [currentUser] = await tx
+        .select({ points: users.points, version: users.version })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+
+      if (!currentUser) throw new Error('User not found');
+
+      const newPoints = currentUser.points + pointsDelta;
+      const newLevel = xpEngine.calculateLevel(newPoints);
+
       const [updatedUser] = await tx
         .update(users)
         .set({
-          points: sql`${users.points} + ${pointsDelta}`,
-          // Leveling logic could go here or be a separate check
-          version: sql`${users.version} + 1`,
+          points: newPoints,
+          level: newLevel,
+          version: currentUser.version + 1,
         })
-        .where(eq(users.id, userId))
+        .where(and(eq(users.id, userId), eq(users.version, currentUser.version))) // Optimistic Lock
         .returning();
 
       if (!updatedUser) {
-        throw new Error(`Failed to update points for user ${userId}`);
+        throw new Error(`Failed to update points for user ${userId} (Concurrency Error)`);
       }
 
-      console.log(`[Gamification] User ${userId} gained ${pointsDelta} XP. Total: ${updatedUser.points}`);
+      console.log(`[Gamification] User ${userId} gained ${pointsDelta} XP. Total: ${updatedUser.points}. Level: ${updatedUser.level}`);
       return updatedUser;
     });
   }

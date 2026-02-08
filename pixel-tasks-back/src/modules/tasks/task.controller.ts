@@ -66,7 +66,11 @@ taskController.post('/:id/complete', async (c) => {
     await gamificationService.processEvent(
       user.id,
       EventType.TASK_COMPLETE,
-      { taskId: task.id, difficulty: task.priority }, // Map priority to difficulty rule
+      { 
+        taskId: task.id, 
+        difficulty: task.priority,
+        xpReward: task.xpReward 
+      }, 
       task.id 
     );
   } catch (err) {

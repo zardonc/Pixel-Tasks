@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useStore } from '../store';
 import { CheckSquare, Gamepad2, ShoppingBag, Trophy, Menu, Plus, Settings, Sun, Moon, LogOut } from 'lucide-react';
+import { GamificationHUD } from './GamificationHUD';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -50,16 +51,8 @@ export const Layout: React.FC<LayoutProps> = ({ children, onAddTask }) => {
         </div>
       </div>
 
-      {/* 2. XP Display - Top Right (Moved from Sidebar) */}
-      <div className="fixed top-6 right-6 z-40">
-        <div className="bg-yellow-50 dark:bg-yellow-900/30 border-3 border-black dark:border-white px-4 py-2 shadow-[4px_4px_0_0_#000] dark:shadow-[4px_4px_0_0_rgba(255,255,255,0.5)] flex items-center gap-3 transform hover:scale-105 transition-transform cursor-default">
-            <span className="text-primary text-2xl animate-pulse">⚡</span>
-            <div>
-                <span className="font-bold text-2xl block leading-none">{user.xp} XP</span>
-                <span className="text-xs uppercase font-bold text-gray-500 dark:text-gray-400">Level {user.level}</span>
-            </div>
-        </div>
-      </div>
+      {/* 2. XP Display - Top Right */}
+      <GamificationHUD />
 
       {/* 3. Backdrop (Blur) */}
       <div 

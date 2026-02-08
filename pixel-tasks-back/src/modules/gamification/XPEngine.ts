@@ -32,6 +32,13 @@ class XPEngine {
 
     return totalXP;
   }
+  calculateLevel(totalXP: number): number {
+    return Math.floor(totalXP / 100) + 1;
+  }
+
+  getLevelProgress(totalXP: number): number {
+    return totalXP % 100;
+  }
 }
 
 export const xpEngine = new XPEngine();

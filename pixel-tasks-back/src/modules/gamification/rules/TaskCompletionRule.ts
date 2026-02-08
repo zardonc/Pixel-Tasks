@@ -8,6 +8,10 @@ export class TaskCompletionRule implements Rule {
   }
 
   calculateReward(event: GamificationEvent): number {
+    if (event.payload.xpReward) {
+      return event.payload.xpReward;
+    }
+
     // Extract difficulty from payload (default to EASY if missing)
     const difficulty = event.payload.difficulty || 'EASY';
 
