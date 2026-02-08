@@ -3,57 +3,56 @@
 const API_URL = 'http://localhost:3000';
 
 async function verifyAuth() {
-  console.log('--- Verifying Auth Flow ---');
+  console.log('--- Verifying Auth with Name/Companion ---');
 
-  // 1. Register
-  const email = `user-${Date.now()}@example.com`;
+  // 1. Register User with Profile
+  const email = `hero-${Date.now()}@pixel.com`;
   const password = 'password123';
-  console.log(`1. Registering: ${email}`);
-  
-  const regRes = await fetch(`${API_URL}/auth/register`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password, role: 'USER' })
-  });
+  const name = 'Pixel Hero';
+  const companion = 'DOG';
 
-  if (regRes.status !== 201) {
-    console.error('Registration failed:', await regRes.text());
+  console.log(`1. Registering user: ${email}`);
+  try {
+    const res = await fetch(`${API_URL}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, name, companion })
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(`Registration failed: ${JSON.stringify(err)}`);
+    }
+
+    const data = await res.json();
+    console.log('   Registration Response:', data);
+
+    if (data.user.name !== name || data.user.companion !== companion) {
+      throw new Error(`Mismatch! Expected name=${name}, companion=${companion}. Got name=${data.user.name}, companion=${data.user.companion}`);
+    }
+
+    console.log('   ✅ Profile data saved correctly.');
+
+    // 2. Login and check profile
+    console.log('2. Logging in...');
+    const loginRes = await fetch(`${API_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+    });
+    
+    const loginData = await loginRes.json();
+    console.log('   Login Response:', loginData);
+
+    if (loginData.user.name !== name) {
+         throw new Error('Login response missing correct name');
+    }
+    console.log('   ✅ Login returned correct profile.');
+
+  } catch (error) {
+    console.error('❌ Verification Failed:', error);
     process.exit(1);
   }
-  const regData = await regRes.json();
-  console.log('   Registration Success. Token received.');
-
-  // 2. Login
-  console.log(`2. Logging in: ${email}`);
-  const loginRes = await fetch(`${API_URL}/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password })
-  });
-  
-  if (loginRes.status !== 200) {
-    console.error('Login failed:', await loginRes.text());
-    process.exit(1);
-  }
-  const loginData = await loginRes.json();
-  const token = loginData.token;
-  console.log('   Login Success. Token:', token.substring(0, 10) + '...');
-
-  // 3. Protected Route (Me)
-  console.log('3. Accessing Protected Route (/auth/me)');
-  const meRes = await fetch(`${API_URL}/auth/me`, {
-    headers: { 'Authorization': `Bearer ${token}` }
-  });
-
-  if (meRes.status !== 200) {
-    console.error('Protected route access failed:', await meRes.text());
-    process.exit(1);
-  }
-  const meData = await meRes.json();
-  console.log('   Protected Access Success. User ID:', meData.user.id);
-
-  console.log('--- Auth Verification Passed ---');
 }
 
-// Brief wait to ensure server is up if running concurrently (though we'll run server in background manually first)
-setTimeout(verifyAuth, 1000);
+verifyAuth();

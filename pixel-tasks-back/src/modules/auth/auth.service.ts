@@ -20,7 +20,7 @@ class AuthService {
     );
   }
 
-  async register(email: string, password: string, role: 'USER' | 'ADMIN' = 'USER') {
+  async register(email: string, password: string, name?: string, companion?: string, role: 'USER' | 'ADMIN' = 'USER') {
     // Check existing
     const existing = await db.select().from(users).where(eq(users.email, email)).limit(1);
     if (existing.length > 0) {
@@ -37,6 +37,8 @@ class AuthService {
       email,
       passwordHash,
       role,
+      name,
+      companion,
     }).returning();
 
     if (!newUser) {
@@ -45,7 +47,14 @@ class AuthService {
 
     return {
       token: this.generateToken(newUser),
-      user: { id: newUser.id, email: newUser.email, role: newUser.role, points: newUser.points }
+      user: { 
+        id: newUser.id, 
+        email: newUser.email, 
+        role: newUser.role, 
+        points: newUser.points,
+        name: newUser.name,
+        companion: newUser.companion 
+      }
     };
   }
 
@@ -58,14 +67,29 @@ class AuthService {
 
     return {
       token: this.generateToken(user),
-      user: { id: user.id, email: user.email, role: user.role, points: user.points }
+      user: { 
+        id: user.id, 
+        email: user.email, 
+        role: user.role, 
+        points: user.points,
+        name: user.name,
+        companion: user.companion
+      }
     };
   }
 
   async getProfile(userId: string) {
     const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
     if (!user) return null;
-    return { id: user.id, email: user.email, role: user.role, points: user.points, level: user.level };
+    return { 
+      id: user.id, 
+      email: user.email, 
+      role: user.role, 
+      points: user.points, 
+      level: user.level,
+      name: user.name,
+      companion: user.companion
+    };
   }
 }
 

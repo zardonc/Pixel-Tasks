@@ -8,6 +8,10 @@ export const users = sqliteTable('users', {
   passwordHash: text('password_hash').notNull(),
   role: text('role', { enum: ['USER', 'ADMIN'] }).default('USER').notNull(),
   
+  // Profile
+  name: text('name'),
+  companion: text('companion'), // DOG, CAT
+  
   // Gamification Stats
   points: integer('points').default(0).notNull(),
   level: integer('level').default(1).notNull(),

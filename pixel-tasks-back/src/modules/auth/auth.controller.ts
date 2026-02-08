@@ -6,12 +6,12 @@ const auth = new Hono();
 
 // Register
 auth.post('/register', async (c) => {
-  const { email, password, role } = await c.req.json();
+  const { email, password, name, companion, role } = await c.req.json();
   if (!email || !password) {
     return c.json({ message: 'Email and password required' }, 400);
   }
   
-  const result = await authService.register(email, password, role);
+  const result = await authService.register(email, password, name, companion, role);
   return c.json(result, 201);
 });
 

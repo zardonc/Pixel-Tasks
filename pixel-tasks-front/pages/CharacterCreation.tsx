@@ -1,29 +1,36 @@
 import React, { useState } from 'react';
-import { useStore } from '../store';
+import { useAuth } from '../context/AuthContext';
 import { PixelButton, PixelCard, PixelInput } from '../components/ui/PixelComponents';
 import { CompanionType } from '../types';
 import { motion } from 'framer-motion';
 
 export const CharacterCreation: React.FC = () => {
-  const login = useStore(state => state.login);
+  const { login, register } = useAuth();
   // Default to Login mode (true) instead of Creation mode (false)
   const [isLoginMode, setIsLoginMode] = useState(true);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [companion, setCompanion] = useState<CompanionType>(CompanionType.DOG);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isLoginMode) {
-      if (email && password) {
-        // Mock login with default data since we don't have a real backend
-        login('Returned Hero', email, CompanionType.DOG);
+    setError(null);
+    try {
+      if (isLoginMode) {
+        if (email && password) {
+          await login(email, password);
+        }
+      } else {
+        if (name && email && password) {
+           await register(email, password, name, companion);
+        }
       }
-    } else {
-      if (name && email && password) {
-        login(name, email, companion);
-      }
+    } catch (err: any) {
+      console.error("Auth error:", err);
+      // Basic error handling
+      setError(err.response?.data?.message || 'Authentication failed. Please try again.');
     }
   };
 
@@ -129,6 +136,11 @@ export const CharacterCreation: React.FC = () => {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-2 text-sm font-bold mb-4">
+                <p>{error}</p>
+              </div>
+            )}
             
             {/* Companion Selection - Only in Sign Up */}
             {!isLoginMode && (
