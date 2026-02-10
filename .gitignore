@@ -38,3 +38,9 @@ Thumbs.db
 .assets/
 .workflow-docs/
 repomix-output.xml
+
+# Local Database
+*.db
+*.sqlite
+*.sqlite3
+*-journal
