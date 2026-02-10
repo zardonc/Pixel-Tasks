@@ -1,4 +1,6 @@
+import { create } from 'zustand';
 import { taskService } from './services/task.service';
+import { User, Task, ShopItem, Achievement, CompanionType } from './types';
 
 interface AppState {
   user: User | null;

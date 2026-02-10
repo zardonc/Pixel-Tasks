@@ -18,7 +18,7 @@ export const Shop: React.FC = () => {
             </div>
             <div className="bg-white dark:bg-gray-800 border-2 border-black dark:border-white px-6 py-3 shadow-pixel flex items-center gap-3">
                 <span className="material-icons text-primary text-3xl">monetization_on</span>
-                <span className="text-3xl font-bold">{user?.xp} XP</span>
+                <span className="text-3xl font-bold">{user?.points} XP</span>
             </div>
         </header>
 
@@ -68,7 +68,7 @@ export const Shop: React.FC = () => {
                             </PixelButton>
                         )
                     ) : (
-                        <PixelButton fullWidth onClick={() => buyItem(item.id)} disabled={user && user.xp < item.cost}>
+                        <PixelButton fullWidth onClick={() => buyItem(item.id)} disabled={user && user.points < item.cost}>
                             BUY <span className="ml-2 bg-white/20 px-1 rounded text-sm">{item.cost} XP</span>
                         </PixelButton>
                     )}
