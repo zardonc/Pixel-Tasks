@@ -1,16 +1,18 @@
 /**
  * Database Initialization Script
  * 
- * Creates the SQLite database file and pushes the Drizzle schema.
+ * Creates the SQLite database file, pushes the Drizzle schema,
+ * and seeds the admin account from env config.
  * Usage: npm run db:init
  */
 import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
-import { sql } from 'drizzle-orm';
+import { sql, eq } from 'drizzle-orm';
 import * as schema from '../src/db/schema.js';
 import dotenv from 'dotenv';
-import path from 'path';
 import fs from 'fs';
+import bcrypt from 'bcryptjs';
+import TSID from 'tsid';
 
 dotenv.config();
 
@@ -40,8 +42,7 @@ async function initDatabase() {
 
     const db = drizzle(sqlite, { schema });
 
-    // Create tables using raw SQL derived from schema
-    // (drizzle-kit push is the canonical way, but this provides a code-based fallback)
+    // Create tables
     console.log();
     console.log('🔨 Creating tables...');
 
@@ -103,7 +104,39 @@ async function initDatabase() {
     console.log('   ✅ lists');
     console.log('   ✅ tasks');
 
-    // Verify tables exist
+    // ── Admin Account Seeding ──────────────────────────────
+    const adminEmail = process.env.ADMIN_EMAIL;
+    const adminPassword = process.env.ADMIN_PASSWORD;
+    const adminName = process.env.ADMIN_NAME || 'Admin';
+
+    console.log();
+    if (adminEmail && adminPassword) {
+        const existing = db.select().from(schema.users).where(eq(schema.users.email, adminEmail)).get();
+
+        if (existing) {
+            console.log(`👑 Admin account already exists: ${adminEmail} (skipped)`);
+        } else {
+            const hashedPassword = await bcrypt.hash(adminPassword, 10);
+            const adminId = TSID.next();
+
+            db.insert(schema.users).values({
+                id: adminId,
+                email: adminEmail,
+                passwordHash: hashedPassword,
+                role: 'ADMIN',
+                name: adminName,
+                points: 0,
+                level: 1,
+                version: 1,
+            }).run();
+
+            console.log(`👑 Admin account created: ${adminEmail} (role: ADMIN)`);
+        }
+    } else {
+        console.log('ℹ  No ADMIN_EMAIL/ADMIN_PASSWORD in .env — skipping admin seed.');
+    }
+
+    // ── Verification ───────────────────────────────────────
     const tables = sqlite.prepare(
         "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
     ).all() as { name: string }[];
@@ -111,7 +144,6 @@ async function initDatabase() {
     console.log();
     console.log(`📊 Database initialized with ${tables.length} tables: ${tables.map(t => t.name).join(', ')}`);
 
-    // Verify with a test query
     const userCount = db.select({ count: sql<number>`count(*)` }).from(schema.users).get();
     console.log(`👤 Current users: ${userCount?.count || 0}`);
 
