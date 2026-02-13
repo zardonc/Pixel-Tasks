@@ -20,25 +20,34 @@ This is the backend service for the **Pixel Tasks** gamified productivity applic
     ```bash
     cp .env.example .env
     ```
-    _(Note: For local SQLite development, default settings usually work out of the box)._
+    Key variables:
+    | Variable | Description | Default |
+    |---|---|---|
+    | `DATABASE_URL` | Path to SQLite database file | `local.db` |
+    | `JWT_SECRET` | Secret for signing JWT tokens | _(required)_ |
+    | `PORT` | Server port | `3000` |
 
 ## Database Initialization
 
 We use **Drizzle ORM** with SQLite. The database schema is defined in `src/db/schema.ts`.
 
-To initialize the database (create tables and apply schema changes):
+### First-time Setup
+
+Run the init script to create the database and all tables:
 
 ```bash
-npx drizzle-kit push
+npm run db:init
 ```
 
-This command will:
+### Available Database Scripts
 
-1.  Read the schema from `src/db/schema.ts`.
-2.  Create the `local.db` SQLite file if it doesn't exist.
-3.  Apply any pending schema changes seamlessly.
+| Script      | Command             | Description                                     |
+| ----------- | ------------------- | ----------------------------------------------- |
+| `db:init`   | `npm run db:init`   | Create database & tables from scratch           |
+| `db:push`   | `npm run db:push`   | Push schema changes (after editing `schema.ts`) |
+| `db:studio` | `npm run db:studio` | Open Drizzle Studio to browse data              |
 
-> **Note:** If you encounter file lock issues on Windows, ensure no other processes (like a running server) are accessing `local.db`. You may need to stop the server (`Ctrl+C`) before running migration commands.
+> **Note:** If you encounter file lock issues on Windows, ensure no other processes (like a running server) are accessing the database. You may need to stop the server (`Ctrl+C`) before running database commands.
 
 ## Running the Server
 

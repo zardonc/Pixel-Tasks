@@ -6,6 +6,9 @@
   "scripts": {
     "dev": "npx tsx watch src/index.ts",
     "start": "node dist/index.js",
+    "db:init": "npx tsx scripts/init-db.ts",
+    "db:push": "npx drizzle-kit push",
+    "db:studio": "npx drizzle-kit studio",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
