@@ -8,7 +8,9 @@
     "start": "node dist/index.js",
     "db:init": "npx tsx scripts/init-db.ts",
     "db:push": "npx drizzle-kit push",
+    "db:push:supabase": "npx drizzle-kit push --config=drizzle.config.supabase.ts",
     "db:studio": "npx drizzle-kit studio",
+    "test:supabase": "npx tsx verify-supabase.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
