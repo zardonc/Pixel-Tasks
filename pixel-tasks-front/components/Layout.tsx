@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useStore } from '../store';
-import { CheckSquare, Gamepad2, ShoppingBag, Trophy, Menu, Plus, Settings, Sun, Moon, LogOut } from 'lucide-react';
+import { CheckSquare, Gamepad2, ShoppingBag, Trophy, Menu, Plus, Settings, Sun, Moon, LogOut, User } from 'lucide-react';
 import { GamificationHUD } from './GamificationHUD';
 
 interface LayoutProps {
@@ -84,6 +84,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, onAddTask }) => {
             <DrawerItem to="/gamehub" icon={<Gamepad2 size={24}/>} label="Game Hub" onClick={() => setSidebarOpen(false)} />
             <DrawerItem to="/shop" icon={<ShoppingBag size={24}/>} label="Item Shop" onClick={() => setSidebarOpen(false)} />
             <DrawerItem to="/achievements" icon={<Trophy size={24}/>} label="Hall of Fame" onClick={() => setSidebarOpen(false)} />
+            <DrawerItem to="/profile" icon={<User size={24}/>} label="My Profile" onClick={() => setSidebarOpen(false)} />
          </nav>
 
          {/* Bottom Actions */}
