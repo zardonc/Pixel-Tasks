@@ -1,6 +1,6 @@
 import { db } from '../../db/index.js';
 import { lists } from '../../db/schema.js';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import TSID from 'tsid';
 
 export class ListService {
@@ -23,10 +23,19 @@ export class ListService {
     return newList;
   }
 
+  async renameList(userId: string, listId: string, updates: { name?: string; color?: string; icon?: string }) {
+    const [updated] = await db
+      .update(lists)
+      .set(updates)
+      .where(and(eq(lists.id, listId), eq(lists.userId, userId)))
+      .returning();
+    return updated;
+  }
+
   async deleteList(userId: string, listId: string) {
     const [deleted] = await db
       .delete(lists)
-      .where(eq(lists.id, listId))
+      .where(and(eq(lists.id, listId), eq(lists.userId, userId)))
       .returning();
     return deleted;
   }

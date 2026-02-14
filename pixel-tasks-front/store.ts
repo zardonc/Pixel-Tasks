@@ -1,11 +1,12 @@
 import { create } from 'zustand';
 import { taskService } from './services/task.service';
+import { listService, ListItem } from './services/list.service';
 import { User, Task, ShopItem, Achievement, CompanionType } from './types';
 
 interface AppState {
   user: User | null;
   tasks: Task[];
-  customLists: string[]; // Store custom list names
+  customLists: ListItem[]; // Store custom list objects from backend
   shopItems: ShopItem[];
   achievements: Achievement[];
   isDarkMode: boolean;
@@ -15,11 +16,12 @@ interface AppState {
   login: (name: string, email: string, companion: CompanionType) => void;
   logout: () => void;
   
-  fetchTasks: () => Promise<void>; // New
-  addTask: (task: Partial<Task>) => Promise<void>; // Updated signature
-  addList: (name: string) => void;
-  renameList: (oldName: string, newName: string) => void; 
-  deleteList: (name: string) => void; 
+  fetchTasks: () => Promise<void>;
+  fetchLists: () => Promise<void>;
+  addTask: (task: Partial<Task>) => Promise<void>;
+  addList: (name: string) => Promise<void>;
+  renameList: (oldName: string, newName: string) => Promise<void>; 
+  deleteList: (name: string) => Promise<void>; 
   deleteCompletedTasks: (listFilter: string) => void; 
   toggleTask: (id: string) => Promise<void>; // Async
   deleteTask: (id: string) => Promise<void>; // Async
@@ -49,7 +51,7 @@ const INITIAL_ACHIEVEMENTS: Achievement[] = [
 export const useStore = create<AppState>((set, get) => ({
   user: null, // Start null to show login
   tasks: INITIAL_TASKS,
-  customLists: ['Backlog', 'Shopping'], // Initial custom lists
+  customLists: [], // Fetched from backend
   shopItems: INITIAL_SHOP_ITEMS,
   achievements: INITIAL_ACHIEVEMENTS,
   isDarkMode: false,
@@ -90,20 +92,51 @@ export const useStore = create<AppState>((set, get) => ({
       }
   },
 
-  addList: (name) => set((state) => {
-      if (state.customLists.includes(name)) return state;
-      return { customLists: [...state.customLists, name] };
-  }),
+  fetchLists: async () => {
+      try {
+          const lists = await listService.getLists();
+          set({ customLists: lists });
+      } catch (error) {
+          console.error('Failed to fetch lists:', error);
+      }
+  },
 
-  renameList: (oldName, newName) => set((state) => ({
-      customLists: state.customLists.map(l => l === oldName ? newName : l),
-      tasks: state.tasks.map(t => t.list === oldName ? { ...t, list: newName } : t)
-  })),
+  addList: async (name) => {
+      try {
+          const newList = await listService.createList(name);
+          set((state) => ({ customLists: [...state.customLists, newList] }));
+      } catch (error) {
+          console.error('Failed to create list:', error);
+      }
+  },
 
-  deleteList: (name) => set((state) => ({
-      customLists: state.customLists.filter(l => l !== name),
-      tasks: state.tasks.filter(t => t.list !== name)
-  })),
+  renameList: async (oldName, newName) => {
+      const list = get().customLists.find(l => l.name === oldName);
+      if (!list) return;
+      try {
+          const updated = await listService.renameList(list.id, newName);
+          set((state) => ({
+              customLists: state.customLists.map(l => l.id === list.id ? updated : l),
+              tasks: state.tasks.map(t => t.list === oldName ? { ...t, list: newName } : t)
+          }));
+      } catch (error) {
+          console.error('Failed to rename list:', error);
+      }
+  },
+
+  deleteList: async (name) => {
+      const list = get().customLists.find(l => l.name === name);
+      if (!list) return;
+      try {
+          await listService.deleteList(list.id);
+          set((state) => ({
+              customLists: state.customLists.filter(l => l.id !== list.id),
+              tasks: state.tasks.filter(t => t.list !== name)
+          }));
+      } catch (error) {
+          console.error('Failed to delete list:', error);
+      }
+  },
 
   deleteCompletedTasks: (listFilter) => set((state) => ({
       tasks: state.tasks.filter(t => {

@@ -15,7 +15,7 @@ interface DashboardProps {
 type SortCriteria = 'DATE' | 'DEADLINE' | 'PRIORITY' | 'TITLE';
 
 export const Dashboard: React.FC<DashboardProps> = ({ isEditorOpen, onCloseEditor }) => {
-  const { user, tasks, toggleTask, addTask, deleteTask, updateTask, customLists, addList, renameList, deleteList, deleteCompletedTasks, fetchTasks } = useStore();
+  const { user, tasks, toggleTask, addTask, deleteTask, updateTask, customLists, addList, renameList, deleteList, deleteCompletedTasks, fetchTasks, fetchLists } = useStore();
   
   // Default List Name
   const defaultListName = user ? `${user.name}'s List` : "Hero's List";
@@ -76,6 +76,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ isEditorOpen, onCloseEdito
   useEffect(() => {
       if (user) {
          fetchTasks();
+         fetchLists();
       }
   }, [user]);
   
@@ -392,7 +393,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ isEditorOpen, onCloseEdito
       );
   };
 
-  const allTabs = [defaultListName, 'DAILY', ...customLists];
+  const allTabs = [defaultListName, 'DAILY', ...customLists.map(l => l.name)];
   const isSystemTab = (name: string) => [defaultListName, 'DAILY'].includes(name);
 
   return (
@@ -666,7 +667,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ isEditorOpen, onCloseEdito
                      Move To...
                  </div>
                  <div className="max-h-48 overflow-y-auto custom-scrollbar">
-                     {[defaultListName, 'Daily Quests', ...customLists].map((listName) => {
+                     {[defaultListName, 'Daily Quests', ...customLists.map(l => l.name)].map((listName) => {
                          const currentTask = tasks.find(t => t.id === activeTaskMenu.taskId);
                          let isCurrent = false;
                          
@@ -756,7 +757,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ isEditorOpen, onCloseEdito
                           <option value={defaultListName}>{defaultListName}</option>
                           <option value="Daily Quests">Daily Quests</option>
                           {customLists.map(list => (
-                              <option key={list} value={list}>{list}</option>
+                              <option key={list.id} value={list.name}>{list.name}</option>
                           ))}
                       </select>
                       <ChevronDown className="absolute right-4 top-4 pointer-events-none text-gray-500" />
