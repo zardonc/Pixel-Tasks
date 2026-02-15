@@ -4,6 +4,7 @@ import { userService } from '../services/user.service';
 import { PixelCard, PixelButton, PixelInput } from '../components/ui/PixelComponents';
 import { Shield, Star, Zap, Lock, Check, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { calculateLevel, getLevelProgress, fetchXpConfig } from '../utils/levelConfig';
 
 export const Profile: React.FC = () => {
   const { user } = useStore();
@@ -17,12 +18,17 @@ export const Profile: React.FC = () => {
 
   if (!user) return null;
 
-  // XP calculation (matches GamificationHUD logic)
-  const currentLevel = user.level;
+  // Fetch XP config on mount
+  useEffect(() => { fetchXpConfig(); }, []);
+
+  // XP calculation (config-driven thresholds)
+  const currentLevel = calculateLevel(user.points);
   const currentXP = user.points;
-  const progressXP = currentXP % 100;
-  const percentage = Math.min(100, Math.max(0, progressXP));
-  const xpToNextLevel = 100 - progressXP;
+  const progress = getLevelProgress(user.points);
+  const progressXP = progress.current;
+  const xpRequired = progress.required;
+  const percentage = progress.percentage;
+  const xpToNextLevel = xpRequired - progressXP;
 
   // Level title based on level
   const getLevelTitle = (level: number) => {
@@ -134,7 +140,7 @@ export const Profile: React.FC = () => {
               </div>
               <div className="text-center p-3 bg-gray-50 dark:bg-gray-800 border-2 border-black dark:border-white">
                 <div className="text-gray-500 text-sm uppercase font-bold">Progress</div>
-                <div className="text-2xl font-bold text-green-500">{progressXP}/100</div>
+                <div className="text-2xl font-bold text-green-500">{progressXP}/{xpRequired}</div>
               </div>
               <div className="text-center p-3 bg-gray-50 dark:bg-gray-800 border-2 border-black dark:border-white">
                 <div className="text-gray-500 text-sm uppercase font-bold">Next LVL</div>
@@ -164,7 +170,7 @@ export const Profile: React.FC = () => {
 
                 {/* Text Overlay */}
                 <div className="absolute inset-0 flex items-center justify-center text-white font-bold text-sm tracking-widest drop-shadow-md">
-                  {progressXP} / 100 XP
+                    {progressXP} / {xpRequired} XP
                 </div>
               </div>
             </div>

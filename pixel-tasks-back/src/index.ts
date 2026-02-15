@@ -22,6 +22,11 @@ import { authMiddleware } from './middlewares/auth.js';
 app.use('/tasks/*', authMiddleware);
 app.route('/tasks', taskController);
 
+// Config (XP rules — admin-managed)
+import { configController } from './modules/config/config.controller.js';
+app.use('/config/*', authMiddleware);
+app.route('/config', configController);
+
 // Health Check
 app.get('/health', (c) => {
   return c.json({ status: 'ok', service: 'pixel-tasks-back' });

@@ -2,6 +2,7 @@ import { db } from '../../db/index.js';
 import { tasks } from '../../db/schema.js';
 import { eq, and } from 'drizzle-orm';
 import TSID from 'tsid';
+import { configService } from '../config/config.service.js';
 
 export class TaskService {
   private mapTask(task: typeof tasks.$inferSelect) {
@@ -33,6 +34,12 @@ export class TaskService {
     dueDate?: string;
   }) {
     const taskId = TSID.next();
+    const priority = data.priority || 'MEDIUM';
+
+    // Server-authoritative XP from config
+    const config = await configService.getXpConfig();
+    const xpReward = config.xpByPriority[priority];
+
     const [newTask] = await db
       .insert(tasks)
       .values({
@@ -41,9 +48,9 @@ export class TaskService {
         title: data.title,
         description: data.description,
         list: data.list,
-        priority: data.priority || 'MEDIUM',
+        priority,
         category: data.category || 'CHORE',
-        xpReward: data.xpReward || 100,
+        xpReward,
         isDaily: data.isDaily || false,
         dueDate: data.dueDate,
         status: 'TODO',

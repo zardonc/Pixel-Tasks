@@ -1,14 +1,14 @@
 import { db } from '../../db/index.js';
 import { users, pointsLog } from '../../db/schema.js';
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and, sql, gte } from 'drizzle-orm';
 import TSID from 'tsid';
 import { xpEngine } from './XPEngine.js';
 import { EventType, type GamificationEvent } from './rules/BaseRule.js';
+import { configService } from '../config/config.service.js';
 
 export class GamificationService {
   /**
-   * Process a gamification event: calculate XP, log it, and update user.
-   * Idempotency is handled by checking if eventId already exists in logs (optional specific check).
+   * Process a gamification event: calculate XP, enforce daily cap, log it, and update user.
    */
   async processEvent(userId: string, type: EventType, payload: Record<string, any>, eventId: string) {
     const event: GamificationEvent = {
@@ -18,13 +18,45 @@ export class GamificationService {
       timestamp: new Date(),
     };
 
-    // 1. Calculate XP
-    const pointsDelta = xpEngine.calculateXP(event);
+    // 1. Calculate XP (now async — reads from config)
+    let pointsDelta = await xpEngine.calculateXP(event);
     if (pointsDelta === 0) return null;
 
-    // 2. Atomic Transaction
-    return await db.transaction(async (tx) => {
-      // Check for idempotency (simple check)
+    // 2. Enforce daily High XP cap
+    if (type === EventType.TASK_COMPLETE && payload.difficulty === 'HIGH') {
+      const config = await configService.getXpConfig();
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+
+      // Sum today's HIGH task XP
+      const [todayHighXp] = await db
+        .select({ total: sql<number>`COALESCE(SUM(${pointsLog.pointsDelta}), 0)` })
+        .from(pointsLog)
+        .where(
+          and(
+            eq(pointsLog.userId, userId),
+            eq(pointsLog.eventType, 'TASK_COMPLETE_HIGH'),
+            gte(pointsLog.createdAt, todayStart)
+          )
+        );
+
+      const currentTotal = todayHighXp?.total ?? 0;
+      const remaining = config.dailyHighXpCap - currentTotal;
+
+      if (remaining <= 0) {
+        console.log(`[Gamification] Daily High XP cap reached for user ${userId}. Skipping.`);
+        pointsDelta = 0;
+      } else if (pointsDelta > remaining) {
+        console.log(`[Gamification] Clamping High XP: ${pointsDelta} → ${remaining} (cap: ${config.dailyHighXpCap})`);
+        pointsDelta = remaining;
+      }
+
+      if (pointsDelta === 0) return null;
+    }
+
+    // 3. Atomic Transaction
+    return await db.transaction(async (tx: any) => {
+      // Check for idempotency
       const existingLog = await tx
         .select()
         .from(pointsLog)
@@ -36,17 +68,22 @@ export class GamificationService {
         return null;
       }
 
+      // Tag HIGH tasks separately for cap tracking
+      const logEventType = (type === EventType.TASK_COMPLETE && payload.difficulty === 'HIGH')
+        ? 'TASK_COMPLETE_HIGH'
+        : type;
+
       // Log points
       const logId = TSID.next();
       await tx.insert(pointsLog).values({
         id: logId,
         userId,
-        eventType: type,
+        eventType: logEventType,
         eventId,
         pointsDelta,
       });
 
-      // Fetch current user state for calculation
+      // Fetch current user state
       const [currentUser] = await tx
         .select({ points: users.points, version: users.version })
         .from(users)
@@ -56,7 +93,7 @@ export class GamificationService {
       if (!currentUser) throw new Error('User not found');
 
       const newPoints = currentUser.points + pointsDelta;
-      const newLevel = xpEngine.calculateLevel(newPoints);
+      const newLevel = await xpEngine.calculateLevel(newPoints);
 
       const [updatedUser] = await tx
         .update(users)
@@ -65,7 +102,7 @@ export class GamificationService {
           level: newLevel,
           version: currentUser.version + 1,
         })
-        .where(and(eq(users.id, userId), eq(users.version, currentUser.version))) // Optimistic Lock
+        .where(and(eq(users.id, userId), eq(users.version, currentUser.version)))
         .returning();
 
       if (!updatedUser) {

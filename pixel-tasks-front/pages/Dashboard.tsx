@@ -6,6 +6,7 @@ import { Task, TaskCategory, TaskPriority } from '../types';
 import { Check, Star, Calendar, Trash2, Edit3, Clock, Flag, Briefcase, Heart, Gamepad2, Home, Plus, ChevronDown, ChevronUp, Bell, List, MoreVertical, ArrowDownAZ, AlertCircle, Type, CheckCircle, Settings, MoreHorizontal } from 'lucide-react';
 import { format, isToday, isTomorrow, isYesterday } from 'date-fns';
 import { v4 as uuidv4 } from 'uuid';
+import { getXpForPriority } from '../utils/levelConfig';
 
 interface DashboardProps {
     isEditorOpen: boolean;
@@ -98,7 +99,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ isEditorOpen, onCloseEdito
         description: newTaskDesc,
         category: newTaskCategory,
         priority: newTaskPriority,
-        xpReward: newTaskPriority === TaskPriority.HIGH ? 500 : newTaskPriority === TaskPriority.MEDIUM ? 250 : 100,
+        xpReward: getXpForPriority(newTaskPriority),
         completed: false,
         dueDate: newTaskDate.toISOString(),
         isDaily: isDaily,

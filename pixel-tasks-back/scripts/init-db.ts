@@ -97,12 +97,21 @@ async function initDatabase() {
             created_at INTEGER DEFAULT (strftime('%s', 'now')),
             updated_at INTEGER DEFAULT (strftime('%s', 'now'))
         );
+
+        CREATE TABLE IF NOT EXISTS game_config (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL,
+            version INTEGER NOT NULL DEFAULT 1,
+            updated_by TEXT REFERENCES users(id),
+            updated_at INTEGER DEFAULT (strftime('%s', 'now'))
+        );
     `);
 
     console.log('   ✅ users');
     console.log('   ✅ points_log');
     console.log('   ✅ lists');
     console.log('   ✅ tasks');
+    console.log('   ✅ game_config');
 
     // ── Admin Account Seeding ──────────────────────────────
     const adminEmail = process.env.ADMIN_EMAIL;

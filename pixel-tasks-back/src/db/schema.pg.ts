@@ -74,3 +74,12 @@ export const tasks = pgTable('tasks', {
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 });
+
+// Game Config Table (Admin-Managed XP Rules)
+export const gameConfig = pgTable('game_config', {
+  key: text('key').primaryKey(),             // e.g. 'xp_rules'
+  value: text('value').notNull(),            // JSON blob
+  version: integer('version').default(1).notNull(),
+  updatedBy: text('updated_by').references(() => users.id),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});

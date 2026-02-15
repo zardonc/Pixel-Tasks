@@ -74,3 +74,12 @@ export const tasks = sqliteTable('tasks', {
   createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`(strftime('%s', 'now'))`),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).default(sql`(strftime('%s', 'now'))`),
 });
+
+// Game Config Table (Admin-Managed XP Rules)
+export const gameConfig = sqliteTable('game_config', {
+  key: text('key').primaryKey(),             // e.g. 'xp_rules'
+  value: text('value').notNull(),            // JSON blob
+  version: integer('version').default(1).notNull(),
+  updatedBy: text('updated_by').references(() => users.id),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).default(sql`(strftime('%s', 'now'))`),
+});

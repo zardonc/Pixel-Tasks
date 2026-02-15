@@ -86,7 +86,8 @@ taskController.post('/:id/complete', async (c) => {
       { 
         taskId: task.id, 
         difficulty: task.priority,
-        xpReward: task.xpReward 
+        dueDate: task.dueDate,
+        completedAt: task.completedAt,
       }, 
       task.id 
     );
