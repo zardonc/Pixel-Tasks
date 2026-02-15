@@ -1,16 +1,39 @@
-import { drizzle } from 'drizzle-orm/better-sqlite3';
-import Database from 'better-sqlite3';
-import * as schema from './schema.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-// Local Development Library
-const sqlite = new Database('local.db');
-export const db = drizzle(sqlite, { schema });
+const DB_MODE = process.env.DB_MODE || 'sqlite';
 
-// Placeholder for Postgres (Supabase) logic:
-// if (process.env.NODE_ENV === 'production') {
-//    const client = postgres(process.env.DATABASE_URL!);
-//    export const db = drizzle(client, { schema });
-// }
+let db: any;
+
+if (DB_MODE === 'postgres') {
+    // ── Postgres / Supabase ──────────────────────────────
+    const { drizzle } = await import('drizzle-orm/postgres-js');
+    const postgres = (await import('postgres')).default;
+    const schema = await import('./schema.pg.js');
+
+    const connectionString = process.env.SUPABASE_DB_URL;
+    if (!connectionString) {
+        throw new Error('SUPABASE_DB_URL is required when DB_MODE=postgres');
+    }
+
+    const client = postgres(connectionString, { prepare: false });
+    db = drizzle(client, { schema });
+
+    console.log('🐘 Connected to Postgres (Supabase)');
+} else {
+    // ── SQLite (Local Dev) ───────────────────────────────
+    const { drizzle } = await import('drizzle-orm/better-sqlite3');
+    const Database = (await import('better-sqlite3')).default;
+    const schema = await import('./schema.js');
+
+    const DB_PATH = process.env.DATABASE_URL || 'local.db';
+    const sqlite = new Database(DB_PATH);
+    sqlite.pragma('journal_mode = WAL');
+    sqlite.pragma('foreign_keys = ON');
+    db = drizzle(sqlite, { schema });
+
+    console.log(`📁 Connected to SQLite (${DB_PATH})`);
+}
+
+export { db };

@@ -18,6 +18,23 @@ taskController.post('/lists', async (c) => {
   return c.json(list, 201);
 });
 
+taskController.patch('/lists/:id', async (c) => {
+  const user = c.get('user');
+  const listId = c.req.param('id');
+  const body = await c.req.json();
+  const updated = await listService.renameList(user.id, listId, body);
+  if (!updated) return c.json({ error: 'List not found' }, 404);
+  return c.json(updated);
+});
+
+taskController.delete('/lists/:id', async (c) => {
+  const user = c.get('user');
+  const listId = c.req.param('id');
+  const deleted = await listService.deleteList(user.id, listId);
+  if (!deleted) return c.json({ error: 'List not found' }, 404);
+  return c.json({ success: true });
+});
+
 // Tasks
 taskController.get('/', async (c) => {
   const user = c.get('user');

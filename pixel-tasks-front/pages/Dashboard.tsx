@@ -15,7 +15,7 @@ interface DashboardProps {
 type SortCriteria = 'DATE' | 'DEADLINE' | 'PRIORITY' | 'TITLE';
 
 export const Dashboard: React.FC<DashboardProps> = ({ isEditorOpen, onCloseEditor }) => {
-  const { user, tasks, toggleTask, addTask, deleteTask, updateTask, customLists, addList, renameList, deleteList, deleteCompletedTasks, fetchTasks } = useStore();
+  const { user, tasks, toggleTask, addTask, deleteTask, updateTask, customLists, addList, renameList, deleteList, deleteCompletedTasks, fetchTasks, fetchLists } = useStore();
   
   // Default List Name
   const defaultListName = user ? `${user.name}'s List` : "Hero's List";
@@ -50,6 +50,22 @@ export const Dashboard: React.FC<DashboardProps> = ({ isEditorOpen, onCloseEdito
   
   const [selectedList, setSelectedList] = useState(defaultListName);
 
+  // Confirmation Modal State
+  const [confirmation, setConfirmation] = useState<{
+      isOpen: boolean;
+      title: string;
+      message: string;
+      onConfirm: () => void;
+      confirmLabel?: string;
+      variant?: 'danger' | 'primary';
+  }>({ 
+      isOpen: false, 
+      title: '', 
+      message: '', 
+      onConfirm: () => {},
+      variant: 'danger' 
+  });
+
   useEffect(() => {
       if (!isEditorOpen) {
           setSelectedList(defaultListName);
@@ -60,6 +76,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ isEditorOpen, onCloseEdito
   useEffect(() => {
       if (user) {
          fetchTasks();
+         fetchLists();
       }
   }, [user]);
   
@@ -123,18 +140,34 @@ export const Dashboard: React.FC<DashboardProps> = ({ isEditorOpen, onCloseEdito
   };
 
   const handleDeleteList = (name: string) => {
-      if (confirm(`Are you sure you want to delete "${name}" and all its tasks?`)) {
-          deleteList(name);
-          setFilter(defaultListName);
-          setActiveMenu(null);
-      }
+      setActiveMenu(null);
+      setConfirmation({
+          isOpen: true,
+          title: 'Delete List',
+          message: `Are you sure you want to delete "${name}" and all its tasks?`,
+          confirmLabel: 'Delete',
+          variant: 'danger',
+          onConfirm: () => {
+              deleteList(name);
+              setFilter(defaultListName);
+              setConfirmation(prev => ({ ...prev, isOpen: false }));
+          }
+      });
   };
 
   const handleClearCompleted = (listName: string) => {
-      if (confirm(`Clear all completed tasks in "${listName}"?`)) {
-          deleteCompletedTasks(listName);
-          setActiveMenu(null);
-      }
+      setActiveMenu(null);
+      setConfirmation({
+          isOpen: true,
+          title: 'Clear Completed',
+          message: `Clear all completed tasks in "${listName}"?`,
+          confirmLabel: 'Clear',
+          variant: 'danger',
+          onConfirm: () => {
+              deleteCompletedTasks(listName);
+              setConfirmation(prev => ({ ...prev, isOpen: false }));
+          }
+      });
   }
 
   const handleMoveTask = (taskId: string, targetList: string) => {
@@ -360,7 +393,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ isEditorOpen, onCloseEdito
       );
   };
 
-  const allTabs = [defaultListName, 'DAILY', ...customLists];
+  const allTabs = [defaultListName, 'DAILY', ...customLists.map(l => l.name)];
   const isSystemTab = (name: string) => [defaultListName, 'DAILY'].includes(name);
 
   return (
@@ -634,7 +667,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ isEditorOpen, onCloseEdito
                      Move To...
                  </div>
                  <div className="max-h-48 overflow-y-auto custom-scrollbar">
-                     {[defaultListName, 'Daily Quests', ...customLists].map((listName) => {
+                     {[defaultListName, 'Daily Quests', ...customLists.map(l => l.name)].map((listName) => {
                          const currentTask = tasks.find(t => t.id === activeTaskMenu.taskId);
                          let isCurrent = false;
                          
@@ -724,7 +757,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ isEditorOpen, onCloseEdito
                           <option value={defaultListName}>{defaultListName}</option>
                           <option value="Daily Quests">Daily Quests</option>
                           {customLists.map(list => (
-                              <option key={list} value={list}>{list}</option>
+                              <option key={list.id} value={list.name}>{list.name}</option>
                           ))}
                       </select>
                       <ChevronDown className="absolute right-4 top-4 pointer-events-none text-gray-500" />
@@ -798,14 +831,44 @@ export const Dashboard: React.FC<DashboardProps> = ({ isEditorOpen, onCloseEdito
 
               <div className="pt-4 flex gap-4">
                   <PixelButton variant="danger" className="flex-1" onClick={onCloseEditor}>
-                      Abandon
+                      Cancel
                   </PixelButton>
-                  <PixelButton className="flex-[2]" onClick={handleSaveTask}>
-                      Save Quest
+                  <PixelButton className="flex-1" onClick={handleSaveTask}>
+                      Save
                   </PixelButton>
               </div>
           </div>
       </PixelModal>
+
+      {/* Confirmation Modal */}
+      <PixelModal 
+        isOpen={confirmation.isOpen} 
+        onClose={() => setConfirmation(prev => ({ ...prev, isOpen: false }))} 
+        title={confirmation.title}
+      >
+          <div className="space-y-6">
+              <p className="text-xl text-gray-700 dark:text-gray-300">
+                  {confirmation.message}
+              </p>
+              <div className="flex gap-4 justify-end">
+                  <PixelButton 
+                    variant="outline" 
+                    onClick={() => setConfirmation(prev => ({ ...prev, isOpen: false }))}
+                    className="flex-1"
+                  >
+                      Cancel
+                  </PixelButton>
+                  <PixelButton 
+                    variant={confirmation.variant || 'danger'} 
+                    onClick={confirmation.onConfirm}
+                    className="flex-1"
+                  >
+                      {confirmation.confirmLabel || 'Confirm'}
+                  </PixelButton>
+              </div>
+          </div>
+      </PixelModal>
+
 
       {/* Reused Date Picker for both New Task & Rescheduling */}
       <PixelDatePicker 

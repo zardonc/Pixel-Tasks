@@ -14,4 +14,19 @@ user.get('/profile', async (c) => {
   return c.json(profile);
 });
 
+// Change Password
+user.post('/password', async (c) => {
+  const currentUser = c.get('user');
+  const body = await c.req.json();
+
+  const { oldPassword, newPassword } = body;
+
+  if (!oldPassword || !newPassword) {
+    return c.json({ error: 'Both oldPassword and newPassword are required' }, 400);
+  }
+
+  const result = await userService.changePassword(currentUser.id, oldPassword, newPassword);
+  return c.json(result);
+});
+
 export default user;
