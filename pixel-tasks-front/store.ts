@@ -47,12 +47,14 @@ const INITIAL_ACHIEVEMENTS: Achievement[] = [
   { id: '1', title: 'Novice Slayer', description: 'Complete your first 10 tasks.', status: 'CLAIMABLE', progress: 10, maxProgress: 10, reward: 200, icon: 'swords' },
   { id: '2', title: 'Early Bird', description: 'Complete a task before 8:00 AM.', status: 'COMPLETED', progress: 1, maxProgress: 1, reward: 100, icon: 'sun' },
   { id: '3', title: 'Streak Master', description: 'Maintain a 7-day login streak.', status: 'IN_PROGRESS', progress: 5, maxProgress: 7, reward: 500, icon: 'fire' },
+  { id: 'daily_login', title: 'Daily Reward', description: 'Log in to the pixel world.', status: 'CLAIMABLE', progress: 1, maxProgress: 1, reward: 50, icon: 'zap' },
 ];
 
 // ── LocalStorage Persistence Helpers ──
 const LS_OWNED_ITEMS = 'pixel_owned_items';
 const LS_EQUIPPED_ITEM = 'pixel_equipped_item';
 const LS_CLAIMED_ACHIEVEMENTS = 'pixel_claimed_achievements';
+const LS_LAST_DAILY_LOGIN = 'pixel_last_daily_login';
 
 function loadOwnedItems(): Set<string> {
   try { return new Set(JSON.parse(localStorage.getItem(LS_OWNED_ITEMS) || '[]')); }
@@ -74,6 +76,12 @@ function loadClaimedAchievements(): Set<string> {
 function saveClaimedAchievements(ids: string[]) {
   localStorage.setItem(LS_CLAIMED_ACHIEVEMENTS, JSON.stringify(ids));
 }
+function loadLastDailyLogin(): string | null {
+  return localStorage.getItem(LS_LAST_DAILY_LOGIN);
+}
+function saveLastDailyLogin(dateStr: string) {
+  localStorage.setItem(LS_LAST_DAILY_LOGIN, dateStr);
+}
 
 function hydrateShopItems(): ShopItem[] {
   const owned = loadOwnedItems();
@@ -87,10 +95,19 @@ function hydrateShopItems(): ShopItem[] {
 
 function hydrateAchievements(): Achievement[] {
   const claimed = loadClaimedAchievements();
-  return INITIAL_ACHIEVEMENTS.map(ach => ({
-    ...ach,
-    status: claimed.has(ach.id) ? 'COMPLETED' : ach.status,
-  }));
+  const lastDaily = loadLastDailyLogin();
+  const today = new Date().toISOString().split('T')[0];
+  const isDailyClaimed = lastDaily === today;
+
+  return INITIAL_ACHIEVEMENTS.map(ach => {
+    if (ach.id === 'daily_login') {
+      return { ...ach, status: isDailyClaimed ? 'COMPLETED' : 'CLAIMABLE' };
+    }
+    return {
+      ...ach,
+      status: claimed.has(ach.id) ? 'COMPLETED' : ach.status,
+    };
+  });
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -363,8 +380,12 @@ export const useStore = create<AppState>((set, get) => ({
           user: s.user ? { ...s.user, points: data.points, level: data.level } : s.user,
         }));
         // Persist to localStorage
-        const claimedIds = get().achievements.filter(a => a.status === 'COMPLETED').map(a => a.id);
-        saveClaimedAchievements(claimedIds);
+        if (id === 'daily_login') {
+            saveLastDailyLogin(new Date().toISOString().split('T')[0]);
+        } else {
+            const claimedIds = get().achievements.filter(a => a.status === 'COMPLETED' && a.id !== 'daily_login').map(a => a.id);
+            saveClaimedAchievements(claimedIds);
+        }
       } catch (err: any) {
         if (err?.response?.status === 409) {
           // Already claimed on server — keep COMPLETED status, just sync user

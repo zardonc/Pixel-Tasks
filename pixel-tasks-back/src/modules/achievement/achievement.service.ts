@@ -12,7 +12,14 @@ export class AchievementService {
   async claimReward(userId: string, achievementId: string, reward: number) {
     if (reward <= 0) throw new Error('Invalid reward');
 
-    // 1. Idempotency — check if this achievement was already claimed
+    // 1. Determine Event ID (handle daily recurring)
+    let eventId = achievementId;
+    if (achievementId === 'daily_login') {
+      const today = new Date().toISOString().split('T')[0];
+      eventId = `daily_login_${today}`;
+    }
+
+    // 2. Idempotency — check if this achievement was already claimed
     const existing = await db
       .select()
       .from(pointsLog)
@@ -20,7 +27,7 @@ export class AchievementService {
         and(
           eq(pointsLog.userId, userId),
           eq(pointsLog.eventType, 'ACHIEVEMENT_CLAIM'),
-          eq(pointsLog.eventId, achievementId)
+          eq(pointsLog.eventId, eventId)
         )
       )
       .limit(1);
@@ -63,7 +70,7 @@ export class AchievementService {
         id: logId,
         userId,
         eventType: 'ACHIEVEMENT_CLAIM',
-        eventId: achievementId,
+        eventId: eventId,
         pointsDelta: reward,
       }).run();
 
