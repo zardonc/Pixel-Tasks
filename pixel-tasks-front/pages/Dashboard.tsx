@@ -6,7 +6,7 @@ import { Task, TaskCategory, TaskPriority } from '../types';
 import { Check, Star, Calendar, Trash2, Edit3, Clock, Flag, Briefcase, Heart, Gamepad2, Home, Plus, ChevronDown, ChevronUp, Bell, List, MoreVertical, ArrowDownAZ, AlertCircle, Type, CheckCircle, Settings, MoreHorizontal } from 'lucide-react';
 import { format, isToday, isTomorrow, isYesterday } from 'date-fns';
 import { v4 as uuidv4 } from 'uuid';
-import { getXpForPriority } from '../utils/levelConfig';
+import { getXpForPriority, fetchXpConfig } from '../utils/levelConfig';
 
 interface DashboardProps {
     isEditorOpen: boolean;
@@ -78,6 +78,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ isEditorOpen, onCloseEdito
       if (user) {
          fetchTasks();
          fetchLists();
+         fetchXpConfig();
       }
   }, [user]);
   
@@ -365,7 +366,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ isEditorOpen, onCloseEdito
 
                              <div className="ml-auto flex items-center gap-1 bg-yellow-100 dark:bg-yellow-900 border border-black dark:border-gray-500 px-2 rounded-sm text-yellow-700 dark:text-yellow-400">
                                  <span className="text-xs">⚡</span>
-                                 <span>{task.xpReward} XP</span>
+                                 <span>{getXpForPriority(task.priority.toUpperCase() as any)} XP</span>
                              </div>
                         </div>
                     )}
