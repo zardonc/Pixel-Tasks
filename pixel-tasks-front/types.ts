@@ -42,6 +42,7 @@ export interface User {
   maxXp?: number;
   coins?: number;
   claimedAchievementIds?: string[];
+  ownedItemIds?: string[];
 }
 
 export interface AuthResponse {

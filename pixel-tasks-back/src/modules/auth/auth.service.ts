@@ -56,6 +56,7 @@ class AuthService {
         companion: newUser.companion,
         level: 1,
         claimedAchievementIds: [],
+        ownedItemIds: ['1'], // Default 'No Frame' is always owned
       }
     };
   }
@@ -81,7 +82,15 @@ class AuthService {
           .select({ eventId: pointsLog.eventId })
           .from(pointsLog)
           .where(and(eq(pointsLog.userId, user.id), eq(pointsLog.eventType, 'ACHIEVEMENT_CLAIM')))
-        ).map((l: { eventId: string }) => l.eventId)
+        ).map((l: { eventId: string }) => l.eventId),
+        ownedItemIds: [
+            '1', 
+            ...(await db
+            .select({ eventId: pointsLog.eventId })
+            .from(pointsLog)
+            .where(and(eq(pointsLog.userId, user.id), eq(pointsLog.eventType, 'SHOP_BUY')))
+            ).map((l: { eventId: string }) => l.eventId.split('_')[1])
+        ]
       }
     };
   }
@@ -101,7 +110,15 @@ class AuthService {
         .select({ eventId: pointsLog.eventId })
         .from(pointsLog)
         .where(and(eq(pointsLog.userId, userId), eq(pointsLog.eventType, 'ACHIEVEMENT_CLAIM')))
-      ).map((l: { eventId: string }) => l.eventId)
+      ).map((l: { eventId: string }) => l.eventId),
+      ownedItemIds: [
+        '1', 
+        ...(await db
+        .select({ eventId: pointsLog.eventId })
+        .from(pointsLog)
+        .where(and(eq(pointsLog.userId, userId), eq(pointsLog.eventType, 'SHOP_BUY')))
+        ).map((l: { eventId: string }) => l.eventId.split('_')[1])
+      ]
     };
   }
 }

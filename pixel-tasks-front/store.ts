@@ -83,12 +83,15 @@ function saveLastDailyLogin(dateStr: string) {
   localStorage.setItem(LS_LAST_DAILY_LOGIN, dateStr);
 }
 
-function hydrateShopItems(): ShopItem[] {
-  const owned = loadOwnedItems();
+function hydrateShopItems(ownedIds?: string[]): ShopItem[] {
+  const localOwned = loadOwnedItems();
+  // Merge server owned IDs with local (server authority wins)
+  const ownedSet = new Set([...localOwned, ...(ownedIds || [])]);
+
   const equipped = loadEquippedItem();
   return INITIAL_SHOP_ITEMS.map(item => ({
     ...item,
-    owned: item.owned || owned.has(item.id),
+    owned: item.owned || ownedSet.has(item.id),
     equipped: equipped ? item.id === equipped : item.equipped,
   }));
 }
@@ -124,7 +127,9 @@ export const useStore = create<AppState>((set, get) => ({
   setUser: (user) => set(state => ({ 
     user,
     // Re-hydrate achievements based on user's claimed list from server
-    achievements: hydrateAchievements(user?.claimedAchievementIds) 
+    achievements: hydrateAchievements(user?.claimedAchievementIds),
+    // Re-hydrate shop items based on user's owned list from server
+    shopItems: hydrateShopItems(user?.ownedItemIds)
   })),
 
   login: (name, email, companion) => set({
@@ -139,7 +144,8 @@ export const useStore = create<AppState>((set, get) => ({
       points: 1250,
       maxXp: 2000,
       coins: 500,
-      claimedAchievementIds: []
+      claimedAchievementIds: [],
+      ownedItemIds: ['1']
     }
   }),
 
