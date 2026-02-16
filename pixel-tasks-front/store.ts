@@ -93,11 +93,14 @@ function hydrateShopItems(): ShopItem[] {
   }));
 }
 
-function hydrateAchievements(): Achievement[] {
-  const claimed = loadClaimedAchievements();
+function hydrateAchievements(claimedIds?: string[]): Achievement[] {
+  const localClaimed = loadClaimedAchievements();
+  // Merge server claimed IDs with local (server authority wins)
+  const claimedSet = new Set([...localClaimed, ...(claimedIds || [])]);
+  
   const lastDaily = loadLastDailyLogin();
   const today = new Date().toISOString().split('T')[0];
-  const isDailyClaimed = lastDaily === today;
+  const isDailyClaimed = lastDaily === today || claimedSet.has(`daily_login_${today}`);
 
   return INITIAL_ACHIEVEMENTS.map(ach => {
     if (ach.id === 'daily_login') {
@@ -105,7 +108,7 @@ function hydrateAchievements(): Achievement[] {
     }
     return {
       ...ach,
-      status: claimed.has(ach.id) ? 'COMPLETED' : ach.status,
+      status: claimedSet.has(ach.id) ? 'COMPLETED' : ach.status,
     };
   });
 }
@@ -118,9 +121,14 @@ export const useStore = create<AppState>((set, get) => ({
   achievements: hydrateAchievements(),
   isDarkMode: false,
 
-  setUser: (user) => set({ user }),
+  setUser: (user) => set(state => ({ 
+    user,
+    // Re-hydrate achievements based on user's claimed list from server
+    achievements: hydrateAchievements(user?.claimedAchievementIds) 
+  })),
 
   login: (name, email, companion) => set({
+    // Local mock login (deprecated mostly, used for dev?)
     user: {
       name,
       email,
@@ -130,7 +138,8 @@ export const useStore = create<AppState>((set, get) => ({
       id: 'local-id',
       points: 1250,
       maxXp: 2000,
-      coins: 500
+      coins: 500,
+      claimedAchievementIds: []
     }
   }),
 

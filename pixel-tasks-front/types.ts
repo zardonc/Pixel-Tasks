@@ -41,6 +41,7 @@ export interface User {
   companion?: CompanionType;
   maxXp?: number;
   coins?: number;
+  claimedAchievementIds?: string[];
 }
 
 export interface AuthResponse {
