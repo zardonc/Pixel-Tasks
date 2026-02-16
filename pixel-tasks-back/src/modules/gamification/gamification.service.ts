@@ -18,7 +18,7 @@ export class GamificationService {
       timestamp: new Date(),
     };
 
-    // 1. Calculate XP (now async — reads from config)
+    // 1. Calculate XP (async — reads from config)
     let pointsDelta = await xpEngine.calculateXP(event);
     if (pointsDelta === 0) return null;
 
@@ -54,48 +54,47 @@ export class GamificationService {
       if (pointsDelta === 0) return null;
     }
 
-    // 3. Atomic Transaction
-    return await db.transaction(async (tx: any) => {
-      // Check for idempotency
-      const existingLog = await tx
-        .select()
-        .from(pointsLog)
-        .where(eq(pointsLog.eventId, eventId))
-        .limit(1);
+    // 3. Pre-transaction async work: idempotency check, user fetch, level calc
+    const existingLog = await db
+      .select()
+      .from(pointsLog)
+      .where(eq(pointsLog.eventId, eventId))
+      .limit(1);
 
-      if (existingLog.length > 0) {
-        console.log(`[Gamification] Event ${eventId} already processed.`);
-        return null;
-      }
+    if (existingLog.length > 0) {
+      console.log(`[Gamification] Event ${eventId} already processed.`);
+      return null;
+    }
 
-      // Tag HIGH tasks separately for cap tracking
-      const logEventType = (type === EventType.TASK_COMPLETE && payload.difficulty === 'HIGH')
-        ? 'TASK_COMPLETE_HIGH'
-        : type;
+    const [currentUser] = await db
+      .select({ points: users.points, version: users.version })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
 
-      // Log points
-      const logId = TSID.next();
-      await tx.insert(pointsLog).values({
+    if (!currentUser) throw new Error('User not found');
+
+    const newPoints = currentUser.points + pointsDelta;
+    const newLevel = await xpEngine.calculateLevel(newPoints);
+
+    // Tag HIGH tasks separately for cap tracking
+    const logEventType = (type === EventType.TASK_COMPLETE && payload.difficulty === 'HIGH')
+      ? 'TASK_COMPLETE_HIGH'
+      : type;
+
+    // 4. Synchronous transaction for DB writes (better-sqlite3 requirement)
+    const logId = TSID.next();
+
+    const [updatedUser] = db.transaction((tx: any) => {
+      tx.insert(pointsLog).values({
         id: logId,
         userId,
         eventType: logEventType,
         eventId,
         pointsDelta,
-      });
+      }).run();
 
-      // Fetch current user state
-      const [currentUser] = await tx
-        .select({ points: users.points, version: users.version })
-        .from(users)
-        .where(eq(users.id, userId))
-        .limit(1);
-
-      if (!currentUser) throw new Error('User not found');
-
-      const newPoints = currentUser.points + pointsDelta;
-      const newLevel = await xpEngine.calculateLevel(newPoints);
-
-      const [updatedUser] = await tx
+      const [updated] = tx
         .update(users)
         .set({
           points: newPoints,
@@ -103,15 +102,18 @@ export class GamificationService {
           version: currentUser.version + 1,
         })
         .where(and(eq(users.id, userId), eq(users.version, currentUser.version)))
-        .returning();
+        .returning()
+        .all();
 
-      if (!updatedUser) {
+      if (!updated) {
         throw new Error(`Failed to update points for user ${userId} (Concurrency Error)`);
       }
 
-      console.log(`[Gamification] User ${userId} gained ${pointsDelta} XP. Total: ${updatedUser.points}. Level: ${updatedUser.level}`);
-      return updatedUser;
+      console.log(`[Gamification] User ${userId} gained ${pointsDelta} XP. Total: ${updated.points}. Level: ${updated.level}`);
+      return [updated];
     });
+
+    return updatedUser;
   }
 }
 

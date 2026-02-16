@@ -27,6 +27,16 @@ import { configController } from './modules/config/config.controller.js';
 app.use('/config/*', authMiddleware);
 app.route('/config', configController);
 
+// Shop (XP purchases)
+import { shopController } from './modules/shop/shop.controller.js';
+app.use('/shop/*', authMiddleware);
+app.route('/shop', shopController);
+
+// Achievements (XP rewards)
+import { achievementController } from './modules/achievement/achievement.controller.js';
+app.use('/achievements/*', authMiddleware);
+app.route('/achievements', achievementController);
+
 // Health Check
 app.get('/health', (c) => {
   return c.json({ status: 'ok', service: 'pixel-tasks-back' });

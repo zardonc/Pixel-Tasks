@@ -1,0 +1,78 @@
+import { db } from '../../db/index.js';
+import { users, pointsLog } from '../../db/schema.js';
+import { eq, and } from 'drizzle-orm';
+import TSID from 'tsid';
+import { xpEngine } from '../gamification/XPEngine.js';
+
+export class AchievementService {
+  /**
+   * Claim an achievement reward: add XP with idempotency check.
+   * Returns updated user points/level, or throws if already claimed.
+   */
+  async claimReward(userId: string, achievementId: string, reward: number) {
+    if (reward <= 0) throw new Error('Invalid reward');
+
+    // 1. Idempotency — check if this achievement was already claimed
+    const existing = await db
+      .select()
+      .from(pointsLog)
+      .where(
+        and(
+          eq(pointsLog.userId, userId),
+          eq(pointsLog.eventType, 'ACHIEVEMENT_CLAIM'),
+          eq(pointsLog.eventId, achievementId)
+        )
+      )
+      .limit(1);
+
+    if (existing.length > 0) {
+      throw new Error('Already claimed');
+    }
+
+    // 2. Fetch current user
+    const [currentUser] = await db
+      .select({ points: users.points, version: users.version })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    if (!currentUser) throw new Error('User not found');
+
+    // 3. Calculate new level (async — must be done before sync transaction)
+    const newPoints = currentUser.points + reward;
+    const newLevel = await xpEngine.calculateLevel(newPoints);
+
+    // 4. Synchronous transaction for DB writes (better-sqlite3 requirement)
+    const logId = TSID.next();
+
+    const [updatedUser] = db.transaction((tx: any) => {
+      const [updated] = tx
+        .update(users)
+        .set({
+          points: newPoints,
+          level: newLevel,
+          version: currentUser.version + 1,
+        })
+        .where(and(eq(users.id, userId), eq(users.version, currentUser.version)))
+        .returning()
+        .all();
+
+      if (!updated) throw new Error('Concurrency conflict — please retry');
+
+      tx.insert(pointsLog).values({
+        id: logId,
+        userId,
+        eventType: 'ACHIEVEMENT_CLAIM',
+        eventId: achievementId,
+        pointsDelta: reward,
+      }).run();
+
+      return [updated];
+    });
+
+    console.log(`[Achievement] User ${userId} claimed "${achievementId}" for ${reward} XP. Total: ${updatedUser.points}`);
+    return { points: updatedUser.points, level: updatedUser.level };
+  }
+}
+
+export const achievementService = new AchievementService();

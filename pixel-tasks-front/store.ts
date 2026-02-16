@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { taskService } from './services/task.service';
 import { listService, ListItem } from './services/list.service';
 import { User, Task, ShopItem, Achievement, CompanionType } from './types';
+import { api } from './api/client';
 
 interface AppState {
   user: User | null;
@@ -26,11 +27,11 @@ interface AppState {
   toggleTask: (id: string) => Promise<void>; // Async
   deleteTask: (id: string) => Promise<void>; // Async
   updateTask: (task: Task) => Promise<void>; // Async
-  buyItem: (id: string) => void;
+  buyItem: (id: string) => Promise<void>;
   equipItem: (id: string) => void;
   toggleDarkMode: () => void;
   addXp: (amount: number) => void;
-  claimAchievement: (id: string) => void; 
+  claimAchievement: (id: string) => Promise<void>; 
 }
 
 const INITIAL_TASKS: Task[] = [];
@@ -48,12 +49,56 @@ const INITIAL_ACHIEVEMENTS: Achievement[] = [
   { id: '3', title: 'Streak Master', description: 'Maintain a 7-day login streak.', status: 'IN_PROGRESS', progress: 5, maxProgress: 7, reward: 500, icon: 'fire' },
 ];
 
+// ── LocalStorage Persistence Helpers ──
+const LS_OWNED_ITEMS = 'pixel_owned_items';
+const LS_EQUIPPED_ITEM = 'pixel_equipped_item';
+const LS_CLAIMED_ACHIEVEMENTS = 'pixel_claimed_achievements';
+
+function loadOwnedItems(): Set<string> {
+  try { return new Set(JSON.parse(localStorage.getItem(LS_OWNED_ITEMS) || '[]')); }
+  catch { return new Set(); }
+}
+function saveOwnedItems(ids: string[]) {
+  localStorage.setItem(LS_OWNED_ITEMS, JSON.stringify(ids));
+}
+function loadEquippedItem(): string | null {
+  return localStorage.getItem(LS_EQUIPPED_ITEM);
+}
+function saveEquippedItem(id: string) {
+  localStorage.setItem(LS_EQUIPPED_ITEM, id);
+}
+function loadClaimedAchievements(): Set<string> {
+  try { return new Set(JSON.parse(localStorage.getItem(LS_CLAIMED_ACHIEVEMENTS) || '[]')); }
+  catch { return new Set(); }
+}
+function saveClaimedAchievements(ids: string[]) {
+  localStorage.setItem(LS_CLAIMED_ACHIEVEMENTS, JSON.stringify(ids));
+}
+
+function hydrateShopItems(): ShopItem[] {
+  const owned = loadOwnedItems();
+  const equipped = loadEquippedItem();
+  return INITIAL_SHOP_ITEMS.map(item => ({
+    ...item,
+    owned: item.owned || owned.has(item.id),
+    equipped: equipped ? item.id === equipped : item.equipped,
+  }));
+}
+
+function hydrateAchievements(): Achievement[] {
+  const claimed = loadClaimedAchievements();
+  return INITIAL_ACHIEVEMENTS.map(ach => ({
+    ...ach,
+    status: claimed.has(ach.id) ? 'COMPLETED' : ach.status,
+  }));
+}
+
 export const useStore = create<AppState>((set, get) => ({
   user: null, // Start null to show login
   tasks: INITIAL_TASKS,
   customLists: [], // Fetched from backend
-  shopItems: INITIAL_SHOP_ITEMS,
-  achievements: INITIAL_ACHIEVEMENTS,
+  shopItems: hydrateShopItems(),
+  achievements: hydrateAchievements(),
   isDarkMode: false,
 
   setUser: (user) => set({ user }),
@@ -223,22 +268,48 @@ export const useStore = create<AppState>((set, get) => ({
       }
   },
 
-  buyItem: (id) => set((state) => {
+  buyItem: async (id) => {
+    const state = get();
     const item = state.shopItems.find(i => i.id === id);
-    if (!item || !state.user || state.user.points < item.cost) return state;
+    if (!item || !state.user || state.user.points < item.cost) return;
 
-    return {
-        user: { ...state.user, points: state.user.points - item.cost },
-        shopItems: state.shopItems.map(i => i.id === id ? { ...i, owned: true } : i)
-    };
-  }),
+    // Optimistic update
+    set(s => ({
+        user: s.user ? { ...s.user, points: s.user.points - item.cost } : s.user,
+        shopItems: s.shopItems.map(i => i.id === id ? { ...i, owned: true } : i)
+    }));
 
-  equipItem: (id) => set((state) => ({
-    shopItems: state.shopItems.map(i => {
-        if (i.type !== 'FRAME') return i; // Only handling frames for now logic
-        return i.id === id ? { ...i, equipped: true } : { ...i, equipped: false }
-    })
-  })),
+    try {
+      const { data } = await api.post<{ points: number; level: number }>('/shop/buy', {
+        itemId: id,
+        cost: item.cost,
+      });
+      // Sync with server-authoritative values
+      set(s => ({
+        user: s.user ? { ...s.user, points: data.points, level: data.level } : s.user,
+      }));
+      // Persist to localStorage
+      const ownedIds = get().shopItems.filter(i => i.owned).map(i => i.id);
+      saveOwnedItems(ownedIds);
+    } catch (err) {
+      console.error('[Store] Shop purchase failed:', err);
+      // Revert optimistic update
+      set(s => ({
+        user: s.user ? { ...s.user, points: s.user.points + item.cost } : s.user,
+        shopItems: s.shopItems.map(i => i.id === id ? { ...i, owned: false } : i)
+      }));
+    }
+  },
+
+  equipItem: (id) => {
+    set((state) => ({
+      shopItems: state.shopItems.map(i => {
+          if (i.type !== 'FRAME') return i;
+          return i.id === id ? { ...i, equipped: true } : { ...i, equipped: false }
+      })
+    }));
+    saveEquippedItem(id);
+  },
 
   toggleDarkMode: () => set((state) => {
     const newMode = !state.isDarkMode;
@@ -270,32 +341,44 @@ export const useStore = create<AppState>((set, get) => ({
       return { user: { ...state.user, points: newPoints } }
   }),
 
-  claimAchievement: (id) => set((state) => {
+  claimAchievement: async (id) => {
+      const state = get();
       const ach = state.achievements.find(a => a.id === id);
-      if (!ach || ach.status !== 'CLAIMABLE' || !state.user) return state;
+      if (!ach || ach.status !== 'CLAIMABLE' || !state.user) return;
 
-      // Logic to add XP (duplicated from addXp to run atomically inside this action)
-      const amount = ach.reward;
-      const currentPoints = state.user.points || 0;
-      const currentMax = state.user.maxXp || 1000;
-      const newPoints = currentPoints + amount;
-      let newUser = { ...state.user, points: newPoints };
-
-      if (newPoints >= currentMax) {
-           newUser = {
-               ...newUser,
-               level: newUser.level + 1,
-               points: newPoints - currentMax,
-               maxXp: Math.floor(currentMax * 1.2)
-           };
-      }
-
-      return {
-          user: newUser,
-          achievements: state.achievements.map(a => 
-              a.id === id ? { ...a, status: 'COMPLETED' } : a
+      // Optimistic update
+      set(s => ({
+          achievements: s.achievements.map(a => 
+              a.id === id ? { ...a, status: 'COMPLETED' as const } : a
           )
-      };
-  })
+      }));
+
+      try {
+        const { data } = await api.post<{ points: number; level: number }>('/achievements/claim', {
+          achievementId: id,
+          reward: ach.reward,
+        });
+        // Sync server-authoritative XP
+        set(s => ({
+          user: s.user ? { ...s.user, points: data.points, level: data.level } : s.user,
+        }));
+        // Persist to localStorage
+        const claimedIds = get().achievements.filter(a => a.status === 'COMPLETED').map(a => a.id);
+        saveClaimedAchievements(claimedIds);
+      } catch (err: any) {
+        if (err?.response?.status === 409) {
+          // Already claimed on server — keep COMPLETED status, just sync user
+          console.log('[Store] Achievement already claimed on server');
+          return;
+        }
+        console.error('[Store] Achievement claim failed:', err);
+        // Revert optimistic update
+        set(s => ({
+          achievements: s.achievements.map(a => 
+              a.id === id ? { ...a, status: 'CLAIMABLE' as const } : a
+          )
+        }));
+      }
+  }
 
 }));
