@@ -1,16 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useStore } from '../store';
 import { PixelCard, PixelButton } from '../components/ui/PixelComponents';
 import { Gamepad2, Grid3X3, Bomb, Trophy, Pause } from 'lucide-react';
 
 export const GameHub: React.FC = () => {
+  const { games, fetchGames } = useStore();
   const [activeGame, setActiveGame] = useState<string | null>(null);
   const [isPaused, setIsPaused] = useState(false);
 
-  const games = [
-      { id: 'sudoku', name: 'Sudoku', tag: 'Logic', desc: 'Fill the grid with digits 1-9.', color: 'bg-blue-400' },
-      { id: '2048', name: '2048', tag: 'Puzzle', desc: 'Slide tiles to reach 2048.', color: 'bg-yellow-400' },
-      { id: 'mines', name: 'Minesweeper', tag: 'Classic', desc: 'Avoid the hidden bombs!', color: 'bg-red-400' },
-  ];
+  useEffect(() => {
+    fetchGames();
+  }, [fetchGames]);
 
   const handleQuit = () => {
       setIsPaused(false);
@@ -152,7 +152,7 @@ export const GameHub: React.FC = () => {
                             <h3 className="text-2xl font-bold uppercase">{game.name}</h3>
                             <span className="bg-black text-white text-xs px-2 py-1 uppercase font-bold">{game.tag}</span>
                         </div>
-                        <p className="text-gray-600 dark:text-gray-400 mb-6 text-lg">{game.desc}</p>
+                        <p className="text-gray-600 dark:text-gray-400 mb-6 text-lg">{game.description}</p>
                         <PixelButton fullWidth className="text-sm">Play Now</PixelButton>
                     </div>
                 </div>

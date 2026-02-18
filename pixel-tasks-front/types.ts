@@ -76,3 +76,12 @@ export interface GameSession {
   score: number;
   active: boolean;
 }
+
+export interface Game {
+  id: string;
+  name: string;
+  description: string;
+  tag?: string;
+  color?: string;
+  isVisible?: boolean;
+}

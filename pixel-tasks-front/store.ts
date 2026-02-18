@@ -1,15 +1,16 @@
 import { create } from 'zustand';
 import { taskService } from './services/task.service';
 import { listService, ListItem } from './services/list.service';
-import { User, Task, ShopItem, Achievement, CompanionType } from './types';
+import { User, Task, ShopItem, Achievement, CompanionType, Game } from './types';
 import { api } from './api/client';
 
 interface AppState {
   user: User | null;
   tasks: Task[];
-  customLists: ListItem[]; // Store custom list objects from backend
+  customLists: ListItem[];
   shopItems: ShopItem[];
   achievements: Achievement[];
+  games: Game[];
   isDarkMode: boolean;
   
   // Actions
@@ -19,14 +20,19 @@ interface AppState {
   
   fetchTasks: () => Promise<void>;
   fetchLists: () => Promise<void>;
+  fetchShopItems: () => Promise<void>;
+  fetchAchievements: () => Promise<void>;
+  fetchGames: () => Promise<void>;
+
   addTask: (task: Partial<Task>) => Promise<void>;
   addList: (name: string) => Promise<void>;
   renameList: (oldName: string, newName: string) => Promise<void>; 
   deleteList: (name: string) => Promise<void>; 
   deleteCompletedTasks: (listFilter: string) => void; 
-  toggleTask: (id: string) => Promise<void>; // Async
-  deleteTask: (id: string) => Promise<void>; // Async
-  updateTask: (task: Task) => Promise<void>; // Async
+  toggleTask: (id: string) => Promise<void>; 
+  deleteTask: (id: string) => Promise<void>; 
+  updateTask: (task: Task) => Promise<void>; 
+  
   buyItem: (id: string) => Promise<void>;
   equipItem: (id: string) => void;
   toggleDarkMode: () => void;
@@ -36,20 +42,6 @@ interface AppState {
 
 const INITIAL_TASKS: Task[] = [];
 
-const INITIAL_SHOP_ITEMS: ShopItem[] = [
-  { id: '1', name: 'No Frame', type: 'FRAME', cost: 0, image: '', owned: true, equipped: true },
-  { id: '2', name: 'Fire Aura', type: 'FRAME', cost: 450, image: '', owned: false, equipped: false },
-  { id: '3', name: 'Ice Crown', type: 'FRAME', cost: 1250, image: '', owned: true, equipped: false },
-  { id: '4', name: 'Golden Frame', type: 'FRAME', cost: 2000, image: '', owned: false, equipped: false },
-];
-
-const INITIAL_ACHIEVEMENTS: Achievement[] = [
-  { id: '1', title: 'Novice Slayer', description: 'Complete your first 10 tasks.', status: 'CLAIMABLE', progress: 10, maxProgress: 10, reward: 200, icon: 'swords' },
-  { id: '2', title: 'Early Bird', description: 'Complete a task before 8:00 AM.', status: 'COMPLETED', progress: 1, maxProgress: 1, reward: 100, icon: 'sun' },
-  { id: '3', title: 'Streak Master', description: 'Maintain a 7-day login streak.', status: 'IN_PROGRESS', progress: 5, maxProgress: 7, reward: 500, icon: 'fire' },
-  { id: 'daily_login', title: 'Daily Reward', description: 'Log in to the pixel world.', status: 'CLAIMABLE', progress: 1, maxProgress: 1, reward: 50, icon: 'zap' },
-];
-
 // ── LocalStorage Persistence Helpers ──
 const LS_OWNED_ITEMS = 'pixel_owned_items';
 const LS_EQUIPPED_ITEM = 'pixel_equipped_item';
@@ -58,363 +50,245 @@ const LS_LAST_DAILY_LOGIN = 'pixel_last_daily_login';
 
 function loadOwnedItems(): Set<string> {
   try { return new Set(JSON.parse(localStorage.getItem(LS_OWNED_ITEMS) || '[]')); }
-  catch { return new Set(); }
+  catch { return new Set(['1']); } // Default 'No Frame' owned
 }
-function saveOwnedItems(ids: string[]) {
-  localStorage.setItem(LS_OWNED_ITEMS, JSON.stringify(ids));
+
+function saveOwnedItems(items: Set<string>) {
+  localStorage.setItem(LS_OWNED_ITEMS, JSON.stringify(Array.from(items)));
 }
+
 function loadEquippedItem(): string | null {
   return localStorage.getItem(LS_EQUIPPED_ITEM);
 }
+
 function saveEquippedItem(id: string) {
   localStorage.setItem(LS_EQUIPPED_ITEM, id);
 }
+
 function loadClaimedAchievements(): Set<string> {
   try { return new Set(JSON.parse(localStorage.getItem(LS_CLAIMED_ACHIEVEMENTS) || '[]')); }
   catch { return new Set(); }
 }
-function saveClaimedAchievements(ids: string[]) {
-  localStorage.setItem(LS_CLAIMED_ACHIEVEMENTS, JSON.stringify(ids));
+
+function saveClaimedAchievements(items: Set<string>) {
+  localStorage.setItem(LS_CLAIMED_ACHIEVEMENTS, JSON.stringify(Array.from(items)));
 }
+
 function loadLastDailyLogin(): string | null {
   return localStorage.getItem(LS_LAST_DAILY_LOGIN);
 }
+
 function saveLastDailyLogin(dateStr: string) {
   localStorage.setItem(LS_LAST_DAILY_LOGIN, dateStr);
 }
 
-function hydrateShopItems(ownedIds?: string[]): ShopItem[] {
-  const localOwned = loadOwnedItems();
-  // Merge server owned IDs with local (server authority wins)
-  const ownedSet = new Set([...localOwned, ...(ownedIds || [])]);
-
-  const equipped = loadEquippedItem();
-  return INITIAL_SHOP_ITEMS.map(item => ({
-    ...item,
-    owned: item.owned || ownedSet.has(item.id),
-    equipped: equipped ? item.id === equipped : item.equipped,
-  }));
-}
-
-function hydrateAchievements(claimedIds?: string[]): Achievement[] {
-  const localClaimed = loadClaimedAchievements();
-  // Merge server claimed IDs with local (server authority wins)
-  const claimedSet = new Set([...localClaimed, ...(claimedIds || [])]);
-  
-  const lastDaily = loadLastDailyLogin();
-  const today = new Date().toISOString().split('T')[0];
-  const isDailyClaimed = lastDaily === today || claimedSet.has(`daily_login_${today}`);
-
-  return INITIAL_ACHIEVEMENTS.map(ach => {
-    if (ach.id === 'daily_login') {
-      return { ...ach, status: isDailyClaimed ? 'COMPLETED' : 'CLAIMABLE' };
-    }
-    return {
-      ...ach,
-      status: claimedSet.has(ach.id) ? 'COMPLETED' : ach.status,
-    };
-  });
-}
-
 export const useStore = create<AppState>((set, get) => ({
-  user: null, // Start null to show login
+  user: null, 
   tasks: INITIAL_TASKS,
-  customLists: [], // Fetched from backend
-  shopItems: hydrateShopItems(),
-  achievements: hydrateAchievements(),
+  customLists: [],
+  shopItems: [], 
+  achievements: [],
+  games: [],
   isDarkMode: false,
 
-  setUser: (user) => set(state => ({ 
-    user,
-    // Re-hydrate achievements based on user's claimed list from server
-    achievements: hydrateAchievements(user?.claimedAchievementIds),
-    // Re-hydrate shop items based on user's owned list from server
-    shopItems: hydrateShopItems(user?.ownedItemIds)
-  })),
+  setUser: (user) => set({ user }),
 
-  login: (name, email, companion) => set({
-    // Local mock login (deprecated mostly, used for dev?)
-    user: {
-      name,
-      email,
-      companion,
-      level: 5,
-      role: 'USER',
-      id: 'local-id',
-      points: 1250,
-      maxXp: 2000,
-      coins: 500,
-      claimedAchievementIds: [],
-      ownedItemIds: ['1']
-    }
-  }),
-
-  logout: () => set({ user: null }),
-
-  addTask: async (task) => {
-      try {
-          const newTask = await taskService.createTask(task);
-          set((state) => ({ tasks: [...state.tasks, newTask] }));
-      } catch (error) {
-          console.error('Failed to add task:', error);
-      }
+  login: (name, email, companion) => {
+      // Login logic is handled by AuthContext
   },
-  
+
+  logout: () => {
+      set({ user: null, tasks: [], customLists: [] });
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+  },
+
   fetchTasks: async () => {
-      try {
-          const tasks = await taskService.getTasks();
-          set({ tasks });
-      } catch (error) {
-          console.error('Failed to fetch tasks:', error);
-      }
+    try {
+        const tasks = await taskService.getTasks();
+        set({ tasks });
+    } catch (e) {
+        console.error('Failed to fetch tasks', e);
+    }
   },
 
   fetchLists: async () => {
       try {
-          const lists = await listService.getLists();
-          set({ customLists: lists });
-      } catch (error) {
-          console.error('Failed to fetch lists:', error);
+          const customLists = await listService.getLists();
+          set({ customLists });
+      } catch (e) {
+          console.error("Failed to fetch lists", e);
       }
   },
 
-  addList: async (name) => {
+  fetchShopItems: async () => {
       try {
-          const newList = await listService.createList(name);
-          set((state) => ({ customLists: [...state.customLists, newList] }));
-      } catch (error) {
-          console.error('Failed to create list:', error);
+          const { data: items } = await api.get<ShopItem[]>('/shop/items');
+          const owned = loadOwnedItems();
+          const equippedId = loadEquippedItem() || '1';
+
+          // Merge backend data with local ownership
+          const merged = items.map(item => ({
+              ...item,
+              owned: owned.has(item.id) || item.cost === 0, 
+              equipped: item.id === equippedId
+          }));
+          set({ shopItems: merged });
+      } catch (e) {
+          console.error("Failed to fetch shop items", e);
       }
+  },
+
+  fetchAchievements: async () => {
+      try {
+          const { data: achievements } = await api.get<Achievement[]>('/achievements'); 
+          const claimed = loadClaimedAchievements();
+          
+          // Re-calc daily login status
+          const lastDaily = loadLastDailyLogin();
+          const today = new Date().toISOString().split('T')[0];
+          const isDailyClaimed = lastDaily === today || claimed.has(`daily_login`); 
+
+          const merged = achievements.map(ach => {
+               let isClaimed = claimed.has(ach.id);
+               if (ach.id === 'daily_login') {
+                   isClaimed = isDailyClaimed;
+               }
+               return {
+                  ...ach,
+                  status: (isClaimed ? 'COMPLETED' : 'CLAIMABLE') as Achievement['status'], 
+                  progress: 0,
+              };
+          });
+          set({ achievements: merged });
+      } catch (e) {
+          console.error("Failed to fetch achievements", e);
+      }
+  },
+
+  fetchGames: async () => {
+      try {
+          const { data: games } = await api.get<Game[]>('/games');
+          set({ games });
+      } catch (e) {
+          console.error("Failed to fetch games", e);
+      }
+  },
+
+  addTask: async (taskData) => {
+      const newTask = await taskService.createTask(taskData);
+      set(state => ({ tasks: [...state.tasks, newTask] }));
+  },
+
+  addList: async (name) => {
+      const newList = await listService.createList(name);
+      set(state => ({ customLists: [...state.customLists, newList] }));
   },
 
   renameList: async (oldName, newName) => {
       const list = get().customLists.find(l => l.name === oldName);
       if (!list) return;
-      try {
-          const updated = await listService.renameList(list.id, newName);
-          set((state) => ({
-              customLists: state.customLists.map(l => l.id === list.id ? updated : l),
-              tasks: state.tasks.map(t => t.list === oldName ? { ...t, list: newName } : t)
-          }));
-      } catch (error) {
-          console.error('Failed to rename list:', error);
-      }
+      await listService.renameList(list.id, newName);
+      set(state => ({ customLists: state.customLists.map(l => l.id === list.id ? { ...l, name: newName } : l) }));
   },
-
+  
   deleteList: async (name) => {
-      const list = get().customLists.find(l => l.name === name);
-      if (!list) return;
-      try {
-          await listService.deleteList(list.id);
-          set((state) => ({
-              customLists: state.customLists.filter(l => l.id !== list.id),
-              tasks: state.tasks.filter(t => t.list !== name)
-          }));
-      } catch (error) {
-          console.error('Failed to delete list:', error);
-      }
+    const list = get().customLists.find(l => l.name === name);
+    if (!list) return;
+    await listService.deleteList(list.id);
+    set(state => ({ customLists: state.customLists.filter(l => l.id !== list.id) }));
   },
 
-  deleteCompletedTasks: (listFilter) => set((state) => ({
-      tasks: state.tasks.filter(t => {
-          // If task is NOT completed, keep it
-          if (!t.completed) return true;
-          
-          const defaultListName = state.user ? `${state.user.name}'s List` : "Hero's List";
-
-          // If task IS completed, check if it belongs to the list being cleaned
-          
-          // Default List (Tasks that are not daily and have no list assigned)
-          if (listFilter === defaultListName) {
-              if (!t.isDaily && !t.list) return false;
-              return true;
-          }
-
-          if (listFilter === 'DAILY' && t.isDaily) return false;
-          
-          // Custom Lists
-          if (t.list === listFilter) return false;
-
-          // Otherwise keep it (completed but in a different list)
-          return true;
-      })
-  })),
+  deleteCompletedTasks: (listFilter) => {
+     set(state => ({
+         tasks: state.tasks.filter(t => !t.completed || (t.list !== listFilter)) 
+     }));
+  },
 
   toggleTask: async (id) => {
-    const task = get().tasks.find(t => t.id === id);
-    if (!task) return;
-
-    // Optimistic Update
-    set((state) => ({
-        tasks: state.tasks.map((t) => t.id === id ? { ...t, completed: !t.completed } : t),
-    }));
-
-    try {
-        if (!task.completed) {
-            // Complete it
-            const response = await taskService.completeTask(id);
-            // Sync state with backend result (server might add points etc)
-            set((state) => {
-                 // Update user points/level from response
-                 const updatedUser = state.user ? { ...state.user, points: response.points, level: response.level, version: (state.user as any).version + 1 } : state.user;
-                 return {
-                     user: updatedUser,
-                     tasks: state.tasks.map((t) => t.id === id ? response.task : t) // Replace with server task state
-                 };
-            });
-        } else {
-             // Re-open it (Not fully implemented on backend yet for un-complete, so we just update status locally or re-fetch)
-             // For now assuming we just patch it.
-             await taskService.updateTask(id, { completed: false });
-        }
-    } catch (error) {
-        console.error('Failed to toggle task:', error);
-        // Revert on error
-         set((state) => ({
-            tasks: state.tasks.map((t) => t.id === id ? { ...t, completed: task.completed } : t),
-        }));
-    }
+     const task = get().tasks.find(t => t.id === id);
+     if (task) {
+         set(state => ({
+             tasks: state.tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t)
+         }));
+         await taskService.updateTask(id, { completed: !task.completed });
+     }
   },
 
   deleteTask: async (id) => {
-      // Optimistic
-      const oldTasks = get().tasks;
-      set((state) => ({ tasks: state.tasks.filter((t) => t.id !== id) }));
-      try {
-        await taskService.deleteTask(id);
-      } catch (error) {
-        console.error('Failed to delete task:', error);
-        set({ tasks: oldTasks });
-      }
+      await taskService.deleteTask(id);
+      set(state => ({ tasks: state.tasks.filter(t => t.id !== id) }));
   },
 
   updateTask: async (updatedTask) => {
-      // Optimistic
-      set((state) => ({
-        tasks: state.tasks.map((t) => t.id === updatedTask.id ? updatedTask : t)
-      }));
-      try {
-        await taskService.updateTask(updatedTask.id, updatedTask);
-      } catch (error) {
-          console.error("Failed to update task", error);
-      }
+     await taskService.updateTask(updatedTask.id, updatedTask);
+     set(state => ({ tasks: state.tasks.map(t => t.id === updatedTask.id ? updatedTask : t) }));
   },
 
   buyItem: async (id) => {
-    const state = get();
-    const item = state.shopItems.find(i => i.id === id);
-    if (!item || !state.user || state.user.points < item.cost) return;
+      try {
+        const { data } = await api.post<{ points: number, level: number }>('/shop/buy', { itemId: id });
 
-    // Optimistic update
-    set(s => ({
-        user: s.user ? { ...s.user, points: s.user.points - item.cost } : s.user,
-        shopItems: s.shopItems.map(i => i.id === id ? { ...i, owned: true } : i)
-    }));
+        const { user } = get();
+        if (user) {
+          set({ user: { ...user, points: data.points, level: data.level } });
+        }
 
-    try {
-      const { data } = await api.post<{ points: number; level: number }>('/shop/buy', {
-        itemId: id,
-        cost: item.cost,
-      });
-      // Sync with server-authoritative values
-      set(s => ({
-        user: s.user ? { ...s.user, points: data.points, level: data.level } : s.user,
-      }));
-      // Persist to localStorage
-      const ownedIds = get().shopItems.filter(i => i.owned).map(i => i.id);
-      saveOwnedItems(ownedIds);
-    } catch (err) {
-      console.error('[Store] Shop purchase failed:', err);
-      // Revert optimistic update
-      set(s => ({
-        user: s.user ? { ...s.user, points: s.user.points + item.cost } : s.user,
-        shopItems: s.shopItems.map(i => i.id === id ? { ...i, owned: false } : i)
-      }));
-    }
+        const owned = loadOwnedItems();
+        owned.add(id);
+        saveOwnedItems(owned);
+
+        set(state => ({
+          shopItems: state.shopItems.map(item => 
+            item.id === id ? { ...item, owned: true } : item
+          )
+        }));
+      } catch (error) {
+        console.error('Purchase failed:', error);
+        throw error;
+      }
   },
 
   equipItem: (id) => {
-    set((state) => ({
-      shopItems: state.shopItems.map(i => {
-          if (i.type !== 'FRAME') return i;
-          return i.id === id ? { ...i, equipped: true } : { ...i, equipped: false }
-      })
-    }));
-    saveEquippedItem(id);
+      saveEquippedItem(id);
+      set(state => ({
+          shopItems: state.shopItems.map(item => ({
+              ...item, 
+              equipped: item.id === id
+          }))
+      }));
   },
 
-  toggleDarkMode: () => set((state) => {
-    const newMode = !state.isDarkMode;
-    if (newMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-    return { isDarkMode: newMode };
+  toggleDarkMode: () => set(state => {
+      const newMode = !state.isDarkMode;
+      if (newMode) document.documentElement.classList.add('dark');
+      else document.documentElement.classList.remove('dark');
+      return { isDarkMode: newMode };
   }),
 
-  addXp: (amount) => set((state) => {
-      if(!state.user) return state;
-      const currentPoints = state.user.points || 0;
-      const currentMax = state.user.maxXp || 1000;
-      const newPoints = currentPoints + amount;
-      
-      // Simple level up logic
-      if (newPoints >= currentMax) {
-          return {
-              user: {
-                  ...state.user,
-                  level: state.user.level + 1,
-                  points: newPoints - currentMax,
-                  maxXp: Math.floor(currentMax * 1.2)
-              }
-          }
-      }
-      return { user: { ...state.user, points: newPoints } }
-  }),
-
+  addXp: (amount) => {
+  },
+  
   claimAchievement: async (id) => {
-      const state = get();
-      const ach = state.achievements.find(a => a.id === id);
-      if (!ach || ach.status !== 'CLAIMABLE' || !state.user) return;
-
-      // Optimistic update
-      set(s => ({
-          achievements: s.achievements.map(a => 
-              a.id === id ? { ...a, status: 'COMPLETED' as const } : a
-          )
-      }));
-
       try {
-        const { data } = await api.post<{ points: number; level: number }>('/achievements/claim', {
-          achievementId: id,
-          reward: ach.reward,
-        });
-        // Sync server-authoritative XP
-        set(s => ({
-          user: s.user ? { ...s.user, points: data.points, level: data.level } : s.user,
-        }));
-        // Persist to localStorage
-        if (id === 'daily_login') {
-            saveLastDailyLogin(new Date().toISOString().split('T')[0]);
-        } else {
-            const claimedIds = get().achievements.filter(a => a.status === 'COMPLETED' && a.id !== 'daily_login').map(a => a.id);
-            saveClaimedAchievements(claimedIds);
+        const { data } = await api.post<{ points: number, level: number }>('/achievements/claim', { achievementId: id });
+        
+        const { user } = get();
+        if (user) {
+            set({ user: { ...user, points: data.points, level: data.level } });
         }
-      } catch (err: any) {
-        if (err?.response?.status === 409) {
-          // Already claimed on server — keep COMPLETED status, just sync user
-          console.log('[Store] Achievement already claimed on server');
-          return;
-        }
-        console.error('[Store] Achievement claim failed:', err);
-        // Revert optimistic update
-        set(s => ({
-          achievements: s.achievements.map(a => 
-              a.id === id ? { ...a, status: 'CLAIMABLE' as const } : a
-          )
+        
+        const claimed = loadClaimedAchievements();
+        claimed.add(id);
+        if (id !== 'daily_login') saveClaimedAchievements(claimed);
+        else saveLastDailyLogin(new Date().toISOString().split('T')[0]);
+        
+        set(state => ({
+            achievements: state.achievements.map(a => a.id === id ? { ...a, status: 'COMPLETED' } : a)
         }));
+      } catch (e) {
+          console.error("Claim failed", e);
+          throw e;
       }
   }
-
 }));

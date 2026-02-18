@@ -4,15 +4,25 @@ import { eq, and } from 'drizzle-orm';
 import TSID from 'tsid';
 import { xpEngine } from '../gamification/XPEngine.js';
 
+import { achievements } from '../../db/schema.js';
+
 export class AchievementService {
   /**
    * Claim an achievement reward: add XP with idempotency check.
    * Returns updated user points/level, or throws if already claimed.
    */
-  async claimReward(userId: string, achievementId: string, reward: number) {
-    if (reward <= 0) throw new Error('Invalid reward');
+  async claimReward(userId: string, achievementId: string) { // Removed reward param
+    // 1. Fetch Achievement from DB
+    const [ach] = await db
+        .select()
+        .from(achievements)
+        .where(eq(achievements.id, achievementId))
+        .limit(1);
 
-    // 1. Determine Event ID (handle daily recurring)
+    if (!ach) throw new Error('Achievement not found');
+    if (!ach.isVisible) throw new Error('Achievement not active');
+
+    // 1b. Determine Event ID (handle daily recurring)
     let eventId = achievementId;
     if (achievementId === 'daily_login') {
       const today = new Date().toISOString().split('T')[0];
@@ -35,6 +45,8 @@ export class AchievementService {
     if (existing.length > 0) {
       throw new Error('Already claimed');
     }
+
+    const reward = ach.reward; // Use DB reward
 
     // 2. Fetch current user
     const [currentUser] = await db
