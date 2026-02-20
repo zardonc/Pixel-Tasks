@@ -1,25 +1,21 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useStore } from '../store';
 import { motion } from 'framer-motion';
+import { calculateLevel, getLevelProgress, fetchXpConfig } from '../utils/levelConfig';
 
 export const GamificationHUD: React.FC = () => {
     const { user } = useStore();
+    const [configLoaded, setConfigLoaded] = useState(false);
+
+    useEffect(() => {
+        fetchXpConfig().then(() => setConfigLoaded(true));
+    }, []);
 
     if (!user) return null;
 
-    // Leveling Logic (Matches Backend: XP / 100 + 1)
-    // 0-99 = Level 1
-    // 100-199 = Level 2
-    const currentLevel = user.level;
-    const currentXP = user.points;
-    const xpForNextLevel = currentLevel * 100; // Linear scaling for now (100, 200, 300...)
-    // Actually backend logic is Math.floor(totalXP / 100) + 1.
-    // So for Level 1 (0-99 XP), next level is at 100.
-    // For Level 2 (100-199 XP), next level is at 200.
-    
-    // Progress within current level
-    const progressXP = currentXP % 100;
-    const percentage = Math.min(100, Math.max(0, progressXP));
+    const currentLevel = calculateLevel(user.points);
+    const progress = getLevelProgress(user.points);
+    const percentage = progress.percentage;
 
     return (
         <div className="fixed top-4 right-4 z-50 flex flex-col items-end pointer-events-none">
@@ -47,7 +43,7 @@ export const GamificationHUD: React.FC = () => {
 
                 {/* Text Overlay */}
                 <div className="absolute inset-0 flex items-center justify-center text-white font-bold text-xs tracking-widest drop-shadow-md">
-                    {progressXP} / 100 XP
+                    {progress.current} / {progress.required} XP
                 </div>
             </div>
         </div>

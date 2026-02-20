@@ -74,3 +74,56 @@ export const tasks = sqliteTable('tasks', {
   createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`(strftime('%s', 'now'))`),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).default(sql`(strftime('%s', 'now'))`),
 });
+
+// Game Config Table (Admin-Managed XP Rules)
+export const gameConfig = sqliteTable('game_config', {
+  key: text('key').primaryKey(),             // e.g. 'xp_rules'
+  value: text('value').notNull(),            // JSON blob
+  version: integer('version').default(1).notNull(),
+  updatedBy: text('updated_by').references(() => users.id),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).default(sql`(strftime('%s', 'now'))`),
+});
+
+// Shop Items Table
+export const shopItems = sqliteTable('shop_items', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  description: text('description'),
+  type: text('type', { enum: ['FRAME', 'PET', 'THEME'] }).notNull(),
+  cost: integer('cost').notNull(),
+  image: text('image'),
+  
+  isVisible: integer('is_visible', { mode: 'boolean' }).default(true).notNull(),
+  
+  check: text('check', { enum: ['OWNED', 'LOCKED'] }).default('LOCKED'), // Optional: Requirements?
+  
+  createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`(strftime('%s', 'now'))`),
+});
+
+// Games Table
+export const games = sqliteTable('games', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  description: text('description'),
+  tag: text('tag'),
+  color: text('color'), // Support frontend styling
+  
+  isVisible: integer('is_visible', { mode: 'boolean' }).default(true).notNull(),
+  
+  createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`(strftime('%s', 'now'))`),
+});
+
+// Achievements Table
+export const achievements = sqliteTable('achievements', {
+  id: text('id').primaryKey(),
+  title: text('title').notNull(),
+  description: text('description').notNull(),
+  icon: text('icon').default('trophy'),
+  
+  reward: integer('reward').notNull(),
+  maxProgress: integer('max_progress').default(1).notNull(),
+  
+  isVisible: integer('is_visible', { mode: 'boolean' }).default(true).notNull(),
+  
+  createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`(strftime('%s', 'now'))`),
+});

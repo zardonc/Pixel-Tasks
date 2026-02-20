@@ -5,17 +5,25 @@ import { Trophy, Lock, Zap } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 
 export const Achievements: React.FC = () => {
-  const { achievements, claimAchievement } = useStore();
+  const { achievements, claimAchievement, fetchAchievements } = useStore();
   const [toastReward, setToastReward] = useState<number | null>(null);
 
-  const handleClaim = (id: string, reward: number) => {
-      claimAchievement(id);
-      setToastReward(reward);
-      
-      // Auto hide toast after 2.5 seconds
-      setTimeout(() => {
-          setToastReward(null);
-      }, 2500);
+  React.useEffect(() => {
+      fetchAchievements();
+  }, []);
+
+  const handleClaim = async (id: string, reward: number) => {
+      try {
+          await claimAchievement(id);
+          setToastReward(reward);
+          
+          // Auto hide toast after 2.5 seconds
+          setTimeout(() => {
+              setToastReward(null);
+          }, 2500);
+      } catch (e) {
+          console.error("Claim failed", e);
+      }
   };
 
   return (

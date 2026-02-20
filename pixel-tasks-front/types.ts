@@ -41,6 +41,8 @@ export interface User {
   companion?: CompanionType;
   maxXp?: number;
   coins?: number;
+  claimedAchievementIds?: string[];
+  ownedItemIds?: string[];
 }
 
 export interface AuthResponse {
@@ -73,4 +75,13 @@ export interface GameSession {
   gameId: string;
   score: number;
   active: boolean;
+}
+
+export interface Game {
+  id: string;
+  name: string;
+  description: string;
+  tag?: string;
+  color?: string;
+  isVisible?: boolean;
 }

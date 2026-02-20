@@ -1,13 +1,18 @@
 import { type Rule, type GamificationEvent, EventType } from './rules/BaseRule.js';
 import { TaskCompletionRule } from './rules/TaskCompletionRule.js';
 import { DailyLoginRule } from './rules/DailyLoginRule.js';
+import { configService } from '../config/config.service.js';
 
 class XPEngine {
   private rules: Rule[] = [];
+  private asyncRules: TaskCompletionRule[] = [];
 
   constructor() {
     // Register Default Rules
-    this.registerRule(new TaskCompletionRule());
+    const taskRule = new TaskCompletionRule();
+    this.registerRule(taskRule);
+    this.asyncRules.push(taskRule);
+
     this.registerRule(new DailyLoginRule());
   }
 
@@ -17,27 +22,42 @@ class XPEngine {
 
   /**
    * Process an event and calculate total XP reward.
-   * Can apply multiple rules if they match.
+   * Uses async config-driven rules where available.
    */
-  calculateXP(event: GamificationEvent): number {
+  async calculateXP(event: GamificationEvent): Promise<number> {
     let totalXP = 0;
 
     for (const rule of this.rules) {
       if (rule.matches(event)) {
-        const reward = rule.calculateReward(event);
-        console.log(`[XPEngine] Rule [${rule.id}] matched. Reward: ${reward}`);
-        totalXP += reward;
+        // Check if this rule has an async variant
+        const asyncRule = this.asyncRules.find(r => r.id === rule.id);
+        if (asyncRule) {
+          const reward = await asyncRule.calculateRewardAsync(event);
+          console.log(`[XPEngine] Rule [${rule.id}] matched (async). Reward: ${reward}`);
+          totalXP += reward;
+        } else {
+          const reward = rule.calculateReward(event);
+          console.log(`[XPEngine] Rule [${rule.id}] matched. Reward: ${reward}`);
+          totalXP += reward;
+        }
       }
     }
 
     return totalXP;
   }
-  calculateLevel(totalXP: number): number {
-    return Math.floor(totalXP / 100) + 1;
+
+  /**
+   * Calculate level from total XP using config-driven thresholds.
+   */
+  async calculateLevel(totalXP: number): Promise<number> {
+    return configService.calculateLevel(totalXP);
   }
 
-  getLevelProgress(totalXP: number): number {
-    return totalXP % 100;
+  /**
+   * Get progress within current level band.
+   */
+  async getLevelProgress(totalXP: number) {
+    return configService.getLevelProgress(totalXP);
   }
 }
 

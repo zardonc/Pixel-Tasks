@@ -3,6 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { useStore } from '../store';
 import { CheckSquare, Gamepad2, ShoppingBag, Trophy, Menu, Plus, Settings, Sun, Moon, LogOut, User } from 'lucide-react';
 import { GamificationHUD } from './GamificationHUD';
+import { useAuth } from '../context/AuthContext';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -10,7 +11,8 @@ interface LayoutProps {
 }
 
 export const Layout: React.FC<LayoutProps> = ({ children, onAddTask }) => {
-  const { user, isDarkMode, toggleDarkMode, logout } = useStore();
+  const { user, isDarkMode, toggleDarkMode } = useStore();
+  const { logout } = useAuth();
   const location = useLocation();
   const [isSidebarOpen, setSidebarOpen] = useState(false);
 
@@ -85,6 +87,16 @@ export const Layout: React.FC<LayoutProps> = ({ children, onAddTask }) => {
             <DrawerItem to="/shop" icon={<ShoppingBag size={24}/>} label="Item Shop" onClick={() => setSidebarOpen(false)} />
             <DrawerItem to="/achievements" icon={<Trophy size={24}/>} label="Hall of Fame" onClick={() => setSidebarOpen(false)} />
             <DrawerItem to="/profile" icon={<User size={24}/>} label="My Profile" onClick={() => setSidebarOpen(false)} />
+            
+            {/* Admin Only Link */}
+            {user?.role === 'ADMIN' && (
+                <DrawerItem 
+                    to="/admin" 
+                    icon={<Settings size={24}/>} 
+                    label="Admin Management" 
+                    onClick={() => setSidebarOpen(false)} 
+                />
+            )}
          </nav>
 
          {/* Bottom Actions */}

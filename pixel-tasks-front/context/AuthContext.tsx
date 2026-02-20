@@ -53,6 +53,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('pixel_owned_items');
+    localStorage.removeItem('pixel_equipped_item');
+    localStorage.removeItem('pixel_claimed_achievements');
+    localStorage.removeItem('pixel_last_daily_login');
     setToken(null);
     setUser(null);
   };

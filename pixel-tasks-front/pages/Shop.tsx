@@ -1,11 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useStore } from '../store';
 import { PixelCard, PixelButton } from '../components/ui/PixelComponents';
 import { ShoppingBag, Check } from 'lucide-react';
 
 export const Shop: React.FC = () => {
-  const { user, shopItems, buyItem, equipItem } = useStore();
+  const { user, shopItems, buyItem, equipItem, fetchShopItems } = useStore();
   const [showOwned, setShowOwned] = useState(false);
+
+  useEffect(() => {
+    fetchShopItems();
+  }, [fetchShopItems]);
 
   const filteredItems = showOwned ? shopItems.filter(i => i.owned) : shopItems;
 

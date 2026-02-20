@@ -1,4 +1,5 @@
 import { type Rule, type GamificationEvent, EventType } from './BaseRule.js';
+import { configService } from '../../config/config.service.js';
 
 export class TaskCompletionRule implements Rule {
   id = 'TASK_COMPLETION_BASE';
@@ -8,21 +9,31 @@ export class TaskCompletionRule implements Rule {
   }
 
   calculateReward(event: GamificationEvent): number {
-    if (event.payload.xpReward) {
-      return event.payload.xpReward;
+    // Synchronous fallback — actual calculation done via calculateRewardAsync
+    return 0;
+  }
+
+  /**
+   * Async reward calculation using config-driven XP values.
+   * Called directly by XPEngine instead of the sync interface.
+   */
+  async calculateRewardAsync(event: GamificationEvent): Promise<number> {
+    const config = await configService.getXpConfig();
+    const priority = (event.payload.difficulty || 'MEDIUM') as 'LOW' | 'MEDIUM' | 'HIGH';
+
+    // Base XP from config
+    const baseXP = config.xpByPriority[priority] ?? config.xpByPriority.MEDIUM;
+
+    // On-time bonus: if dueDate and completedAt exist, calculate early bonus
+    let multiplier = 1;
+    if (event.payload.dueDate && event.payload.completedAt) {
+      const dueTime = new Date(event.payload.dueDate).getTime();
+      const completedTime = new Date(event.payload.completedAt).getTime();
+      const earlyMinutes = Math.max(0, (dueTime - completedTime) / 60000);
+      const cappedMinutes = Math.min(earlyMinutes, config.onTimeBonus.maxEarlyMinutes);
+      multiplier = 1 + config.onTimeBonus.earlyBonusPerMin * cappedMinutes;
     }
 
-    // Extract difficulty from payload (default to EASY if missing)
-    const difficulty = event.payload.difficulty || 'EASY';
-
-    switch (difficulty) {
-      case 'HARD':
-        return 50;
-      case 'MEDIUM':
-        return 30;
-      case 'EASY':
-      default:
-        return 10;
-    }
+    return Math.floor(baseXP * multiplier);
   }
 }

@@ -22,6 +22,33 @@ import { authMiddleware } from './middlewares/auth.js';
 app.use('/tasks/*', authMiddleware);
 app.route('/tasks', taskController);
 
+// Config (XP rules — admin-managed)
+import { configController } from './modules/config/config.controller.js';
+app.use('/config/*', authMiddleware);
+app.route('/config', configController);
+
+// Shop (XP purchases)
+import { shopController } from './modules/shop/shop.controller.js';
+app.use('/shop/*', authMiddleware);
+app.route('/shop', shopController);
+
+// Achievements (XP rewards)
+import { achievementController } from './modules/achievement/achievement.controller.js';
+app.use('/achievements/*', authMiddleware);
+app.route('/achievements', achievementController);
+
+// Game Hub (Public or Auth?) - Currently Auth in frontend, but listing can be public?
+// Let's keep it behind Auth for now to match other features, or make it public. 
+// Frontend GameHub page is protected.
+import { gameHubController } from './modules/gamehub/gamehub.controller.js';
+app.use('/games/*', authMiddleware);
+app.route('/games', gameHubController);
+
+// Admin (Protected by adminOnly in controller, but also needs authMiddleware to populate user)
+import { adminController } from './modules/admin/admin.controller.js';
+app.use('/admin/*', authMiddleware);
+app.route('/admin', adminController);
+
 // Health Check
 app.get('/health', (c) => {
   return c.json({ status: 'ok', service: 'pixel-tasks-back' });
