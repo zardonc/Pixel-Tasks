@@ -37,12 +37,31 @@ async function verify() {
         console.log(`Shop Items: OK (${items.length} items found)`);
     } else console.error('Shop Items Failed:', await shopRes.text());
 
-    console.log('4. Fetching Achievements (Admin View)...');
-    const achRes = await fetch(`${BASE_URL}/admin/achievements`, { headers });
-    if (achRes.ok) {
-        const achs = await achRes.json();
-        console.log(`Achievements: OK (${achs.length} items found)`);
-    } else console.error('Achievements Failed:', await achRes.text());
+    console.log('4. Testing Achievement CRUD...');
+    // Create
+    const createRes = await fetch(`${BASE_URL}/admin/achievements`, {
+        method: 'POST', headers,
+        body: JSON.stringify({ title: 'Test Ach', description: 'Desc', reward: 50, id: 'test_crud_ach' })
+    });
+    if (!createRes.ok) throw new Error(`Create Failed: ${await createRes.text()}`);
+    console.log('   -> Created test achievement');
+
+    // Update (Fix Check)
+    const updateRes = await fetch(`${BASE_URL}/admin/achievements/test_crud_ach`, {
+        method: 'PUT', headers,
+        body: JSON.stringify({ title: 'Updated Title', reward: 100 })
+    });
+    if (!updateRes.ok) throw new Error(`Update Failed: ${await updateRes.text()}`);
+    console.log('   -> Updated test achievement');
+
+    // Delete (Fix Check)
+    const deleteRes = await fetch(`${BASE_URL}/admin/achievements/test_crud_ach`, {
+        method: 'DELETE', headers
+    });
+    if (!deleteRes.ok) throw new Error(`Delete Failed: ${await deleteRes.text()}`);
+    console.log('   -> Deleted test achievement');
+    
+    console.log('All Admin API tests passed!');
 }
 
 verify().catch(console.error);

@@ -5,8 +5,12 @@ import { Trophy, Lock, Zap } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 
 export const Achievements: React.FC = () => {
-  const { achievements, claimAchievement } = useStore();
+  const { achievements, claimAchievement, fetchAchievements } = useStore();
   const [toastReward, setToastReward] = useState<number | null>(null);
+
+  React.useEffect(() => {
+      fetchAchievements();
+  }, []);
 
   const handleClaim = async (id: string, reward: number) => {
       try {

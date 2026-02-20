@@ -335,6 +335,7 @@ const HallOfFamePanel = () => {
     const [loading, setLoading] = useState(true);
     const [editing, setEditing] = useState<any | null>(null);
     const [isCreating, setIsCreating] = useState(false);
+    const [deleteId, setDeleteId] = useState<string | null>(null);
 
     // Form State
     const [formData, setFormData] = useState({
@@ -351,11 +352,12 @@ const HallOfFamePanel = () => {
 
     useEffect(() => { fetchAchievements(); }, []);
 
-    const handleDelete = async (id: string) => {
-        if(!confirm('Delete this achievement?')) return;
+    const confirmDelete = async () => {
+        if (!deleteId) return;
         try {
-            await api.delete('/admin/achievements', { data: { id } });
-            setAchievements(achievements.filter(a => a.id !== id));
+            await api.delete(`/admin/achievements/${deleteId}`);
+            setAchievements(achievements.filter(a => a.id !== deleteId));
+            setDeleteId(null);
         } catch (e) { console.error(e); }
     };
 
@@ -367,7 +369,7 @@ const HallOfFamePanel = () => {
                 setAchievements([...achievements, data]);
                 setIsCreating(false);
             } else if (editing) {
-                await api.put('/admin/achievements', { id: editing.id, ...formData });
+                await api.put(`/admin/achievements/${editing.id}`, formData);
                 setAchievements(achievements.map(a => a.id === editing.id ? { ...a, ...formData } : a));
                 setEditing(null);
             }
@@ -388,6 +390,30 @@ const HallOfFamePanel = () => {
 
     return (
         <div>
+             {/* Delete Confirmation Modal */}
+             {deleteId && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div className="bg-white dark:bg-card-dark border-4 border-black p-6 max-w-sm w-full shadow-[8px_8px_0_0_#000]">
+                        <h3 className="text-xl font-bold mb-4 uppercase">Confirm Delete?</h3>
+                        <p className="mb-6 text-gray-600 dark:text-gray-400">This action cannot be undone.</p>
+                        <div className="flex justify-end gap-4">
+                            <button 
+                                onClick={() => setDeleteId(null)}
+                                className="px-4 py-2 font-bold hover:bg-gray-100 dark:hover:bg-gray-800"
+                            >
+                                CANCEL
+                            </button>
+                            <button 
+                                onClick={confirmDelete}
+                                className="px-4 py-2 bg-red-600 text-white font-bold hover:bg-red-700"
+                            >
+                                DELETE
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-bold">Hall of Fame Editor</h2>
                 {!isCreating && !editing && (
@@ -436,7 +462,7 @@ const HallOfFamePanel = () => {
                         </div>
                         <div className="flex gap-2">
                             <button onClick={() => startEdit(ach)} className="px-3 py-1 bg-blue-500 text-white font-bold text-sm">EDIT</button>
-                            <button onClick={() => handleDelete(ach.id)} className="px-3 py-1 bg-red-500 text-white font-bold text-sm">DELETE</button>
+                            <button onClick={() => setDeleteId(ach.id)} className="px-3 py-1 bg-red-500 text-white font-bold text-sm">DELETE</button>
                         </div>
                     </div>
                 ))}
