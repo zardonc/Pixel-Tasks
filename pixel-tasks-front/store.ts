@@ -250,6 +250,16 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   equipItem: (id) => {
+      const state = get();
+      const item = state.shopItems.find(i => i.id === id);
+      
+      if (item && item.type === 'THEME') {
+          document.documentElement.setAttribute('data-theme', id);
+      } else if (!item) {
+          // Fallback if item is loaded blindly before shop fetch
+          document.documentElement.setAttribute('data-theme', id); 
+      }
+
       saveEquippedItem(id);
       set(state => ({
           shopItems: state.shopItems.map(item => ({

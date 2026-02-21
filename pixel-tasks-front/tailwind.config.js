@@ -10,17 +10,22 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: "#FFD028", // Retro Yellow
-        secondary: "#4ADE80", // Retro Green
-        accent: "#EF4444", // Retro Red
-        "pixel-blue": "#3B82F6",
-        "background-light": "#FFF9F0", // Cream
-        "background-dark": "#1a1a1a", // Dark Grey
-        "card-light": "#FFFFFF",
-        "card-dark": "#2d2d2d",
+        primary: "rgb(var(--color-primary) / <alpha-value>)", 
+        secondary: "rgb(var(--color-secondary) / <alpha-value>)", 
+        accent: "rgb(var(--color-accent) / <alpha-value>)", 
+        "pixel-blue": "rgb(var(--color-pixel-blue) / <alpha-value>)",
+        "background-light": "rgb(var(--color-bg-base) / <alpha-value>)", 
+        "background-dark": "rgb(var(--color-bg-base) / <alpha-value>)", 
+        "card-light": "rgb(var(--color-bg-surface) / <alpha-value>)", 
+        "card-dark": "rgb(var(--color-bg-surface) / <alpha-value>)",
+        theme: {
+          bgBase: "rgb(var(--color-bg-base) / <alpha-value>)",
+          bgSurface: "rgb(var(--color-bg-surface) / <alpha-value>)",
+          textMain: "rgb(var(--color-text-main) / <alpha-value>)",
+        }
       },
       fontFamily: {
-        pixel: ['"VT323"', "monospace"],
+        pixel: ["var(--font-family-pixel)", "monospace"],
       },
       boxShadow: {
         pixel: "4px 4px 0px 0px #000000",

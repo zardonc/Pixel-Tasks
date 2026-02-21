@@ -85,3 +85,38 @@ export interface Game {
   color?: string;
   isVisible?: boolean;
 }
+
+// --- Theme System Types ---
+
+export interface ThemeAssetMap {
+  backgroundUrl?: string;
+  iconsUrl?: string;
+  logoUrl?: string;
+}
+
+export interface ThemePalette {
+  primary: string;           
+  secondary: string;         
+  accent: string;
+  background: {
+    base: string;            
+    surface: string;         
+  };
+  text: {
+    primary: string;         
+    secondary: string;       
+  };
+  border: string;
+}
+
+export interface ThemeTypography {
+  fontFamily: string;
+  radiusBase: string; 
+}
+
+export interface ThemeConfig {
+  id: string;
+  palette: ThemePalette;
+  assets?: ThemeAssetMap;
+  typography: ThemeTypography;
+}
