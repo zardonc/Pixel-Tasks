@@ -36,8 +36,8 @@ Thumbs.db
 # Agentic Tool artifacts (if any local)
 .agent/
 .assets/
-.workflow-docs/
 repomix-output.xml
+.workflow-docs
 
 # Local Database
 *.db
