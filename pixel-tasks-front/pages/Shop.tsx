@@ -100,8 +100,8 @@ export const Shop: React.FC = () => {
                             </PixelButton>
                         )
                     ) : (
-                        <PixelButton fullWidth onClick={() => buyItem(item.id)} disabled={user && user.points < item.cost}>
-                            BUY <span className="ml-2 bg-white/20 px-1 rounded text-sm">{item.cost} XP</span>
+                        <PixelButton fullWidth onClick={() => buyItem(item.id)} disabled={user?.role !== 'ADMIN' && (user?.points ?? 0) < item.cost}>
+                            BUY <span className="ml-2 bg-white/20 px-1 rounded text-sm">{item.cost} XP {user?.role === 'ADMIN' ? '(FREE)' : ''}</span>
                         </PixelButton>
                     )}
                 </PixelCard>
