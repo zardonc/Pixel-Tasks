@@ -127,3 +127,21 @@ export const achievements = sqliteTable('achievements', {
   
   createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`(strftime('%s', 'now'))`),
 });
+
+// User Items Table (Persistent Inventory)
+export const userItems = sqliteTable('user_items', {
+  id: text('id').primaryKey(), // TSID
+  userId: text('user_id').notNull().references(() => users.id),
+  itemId: text('item_id').notNull().references(() => shopItems.id),
+  isEquipped: integer('is_equipped', { mode: 'boolean' }).default(false).notNull(),
+  purchasedAt: integer('purchased_at', { mode: 'timestamp' }).default(sql`(strftime('%s', 'now'))`),
+});
+
+// Shop Transactions Table (Audit & History)
+export const shopTransactions = sqliteTable('shop_transactions', {
+  id: text('id').primaryKey(), // TSID
+  userId: text('user_id').notNull().references(() => users.id),
+  itemId: text('item_id').notNull().references(() => shopItems.id),
+  pricePaid: integer('price_paid').notNull(), // Actual XP deducted (0 for admin)
+  purchasedAt: integer('purchased_at', { mode: 'timestamp' }).default(sql`(strftime('%s', 'now'))`),
+});

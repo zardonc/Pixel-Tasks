@@ -5,8 +5,9 @@ export const shopController = new Hono();
 
 // GET /shop/items — List all visible shop items
 shopController.get('/items', async (c) => {
+  const user = c.get('user');
   try {
-    const items = await shopService.getAllItems();
+    const items = await shopService.getAllItems(user.id);
     return c.json(items);
   } catch (err: any) {
     return c.json({ error: 'Failed to fetch items' }, 500);
@@ -34,5 +35,21 @@ shopController.post('/buy', async (c) => {
     }
     console.error('[ShopController] Purchase failed:', err);
     return c.json({ error: 'Purchase failed' }, 500);
+  }
+});
+
+// POST /shop/equip — Update user inventory equipment state
+shopController.post('/equip', async (c) => {
+  const user = c.get('user');
+  const { itemId } = await c.req.json();
+  
+  if (!itemId) return c.json({ error: 'itemId is required' }, 400);
+
+  try {
+    const result = await shopService.equipItem(user.id, itemId);
+    return c.json(result);
+  } catch (err: any) {
+    console.error('[ShopController] Equip failed:', err);
+    return c.json({ error: err.message || 'Equip failed' }, 500);
   }
 });

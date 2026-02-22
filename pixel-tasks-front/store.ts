@@ -43,43 +43,39 @@ interface AppState {
 const INITIAL_TASKS: Task[] = [];
 
 // ── LocalStorage Persistence Helpers ──
-const LS_OWNED_ITEMS = 'pixel_owned_items';
 const LS_EQUIPPED_ITEM = 'pixel_equipped_item';
 const LS_CLAIMED_ACHIEVEMENTS = 'pixel_claimed_achievements';
 const LS_LAST_DAILY_LOGIN = 'pixel_last_daily_login';
 
-function loadOwnedItems(): Set<string> {
-  try { return new Set(JSON.parse(localStorage.getItem(LS_OWNED_ITEMS) || '[]')); }
-  catch { return new Set(['1']); } // Default 'No Frame' owned
+function loadEquippedItem(userId?: string): string | null {
+  const prefix = userId ? `${userId}_` : '';
+  return localStorage.getItem(`${prefix}${LS_EQUIPPED_ITEM}`);
 }
 
-function saveOwnedItems(items: Set<string>) {
-  localStorage.setItem(LS_OWNED_ITEMS, JSON.stringify(Array.from(items)));
+function saveEquippedItem(userId: string | undefined, id: string) {
+  const prefix = userId ? `${userId}_` : '';
+  localStorage.setItem(`${prefix}${LS_EQUIPPED_ITEM}`, id);
 }
 
-function loadEquippedItem(): string | null {
-  return localStorage.getItem(LS_EQUIPPED_ITEM);
-}
-
-function saveEquippedItem(id: string) {
-  localStorage.setItem(LS_EQUIPPED_ITEM, id);
-}
-
-function loadClaimedAchievements(): Set<string> {
-  try { return new Set(JSON.parse(localStorage.getItem(LS_CLAIMED_ACHIEVEMENTS) || '[]')); }
+function loadClaimedAchievements(userId?: string): Set<string> {
+  const prefix = userId ? `${userId}_` : '';
+  try { return new Set(JSON.parse(localStorage.getItem(`${prefix}${LS_CLAIMED_ACHIEVEMENTS}`) || '[]')); }
   catch { return new Set(); }
 }
 
-function saveClaimedAchievements(items: Set<string>) {
-  localStorage.setItem(LS_CLAIMED_ACHIEVEMENTS, JSON.stringify(Array.from(items)));
+function saveClaimedAchievements(userId: string | undefined, items: Set<string>) {
+  const prefix = userId ? `${userId}_` : '';
+  localStorage.setItem(`${prefix}${LS_CLAIMED_ACHIEVEMENTS}`, JSON.stringify(Array.from(items)));
 }
 
-function loadLastDailyLogin(): string | null {
-  return localStorage.getItem(LS_LAST_DAILY_LOGIN);
+function loadLastDailyLogin(userId?: string): string | null {
+  const prefix = userId ? `${userId}_` : '';
+  return localStorage.getItem(`${prefix}${LS_LAST_DAILY_LOGIN}`);
 }
 
-function saveLastDailyLogin(dateStr: string) {
-  localStorage.setItem(LS_LAST_DAILY_LOGIN, dateStr);
+function saveLastDailyLogin(userId: string | undefined, dateStr: string) {
+  const prefix = userId ? `${userId}_` : '';
+  localStorage.setItem(`${prefix}${LS_LAST_DAILY_LOGIN}`, dateStr);
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -124,16 +120,9 @@ export const useStore = create<AppState>((set, get) => ({
   fetchShopItems: async () => {
       try {
           const { data: items } = await api.get<ShopItem[]>('/shop/items');
-          const owned = loadOwnedItems();
-          const equippedId = loadEquippedItem() || '1';
-
-          // Merge backend data with local ownership
-          const merged = items.map(item => ({
-              ...item,
-              owned: owned.has(item.id) || item.cost === 0, 
-              equipped: item.id === equippedId
-          }));
-          set({ shopItems: merged });
+          // The backend now natively computes "owned" and "equipped" flags per user via SQL Left Join
+          
+          set({ shopItems: items });
       } catch (e) {
           console.error("Failed to fetch shop items", e);
       }
@@ -142,10 +131,11 @@ export const useStore = create<AppState>((set, get) => ({
   fetchAchievements: async () => {
       try {
           const { data: achievements } = await api.get<Achievement[]>('/achievements'); 
-          const claimed = loadClaimedAchievements();
+          const userId = get().user?.id;
+          const claimed = loadClaimedAchievements(userId);
           
           // Re-calc daily login status
-          const lastDaily = loadLastDailyLogin();
+          const lastDaily = loadLastDailyLogin(userId);
           const today = new Date().toISOString().split('T')[0];
           const isDailyClaimed = lastDaily === today || claimed.has(`daily_login`); 
 
@@ -234,10 +224,7 @@ export const useStore = create<AppState>((set, get) => ({
           set({ user: { ...user, points: data.points, level: data.level } });
         }
 
-        const owned = loadOwnedItems();
-        owned.add(id);
-        saveOwnedItems(owned);
-
+        // Trust backend transaction success: mark locally owned
         set(state => ({
           shopItems: state.shopItems.map(item => 
             item.id === id ? { ...item, owned: true } : item
@@ -249,24 +236,30 @@ export const useStore = create<AppState>((set, get) => ({
       }
   },
 
-  equipItem: (id) => {
-      const state = get();
-      const item = state.shopItems.find(i => i.id === id);
-      
-      if (item && item.type === 'THEME') {
-          document.documentElement.setAttribute('data-theme', id);
-      } else if (!item) {
-          // Fallback if item is loaded blindly before shop fetch
-          document.documentElement.setAttribute('data-theme', id); 
-      }
+  equipItem: async (id) => {
+      try {
+          // Verify with Backend API first
+          await api.post('/shop/equip', { itemId: id });
 
-      saveEquippedItem(id);
-      set(state => ({
-          shopItems: state.shopItems.map(item => ({
-              ...item, 
-              equipped: item.id === id
-          }))
-      }));
+          const state = get();
+          const item = state.shopItems.find(i => i.id === id);
+          
+          if (item && item.type === 'THEME') {
+              document.documentElement.setAttribute('data-theme', id);
+          } else if (!item) {
+              document.documentElement.setAttribute('data-theme', id); 
+          }
+
+          saveEquippedItem(state.user?.id, id);
+          set(state => ({
+              shopItems: state.shopItems.map(item => ({
+                  ...item, 
+                  equipped: item.id === id
+              }))
+          }));
+      } catch (e) {
+          console.error('Equip failed:', e);
+      }
   },
 
   toggleDarkMode: () => set(state => {
@@ -288,10 +281,10 @@ export const useStore = create<AppState>((set, get) => ({
             set({ user: { ...user, points: data.points, level: data.level } });
         }
         
-        const claimed = loadClaimedAchievements();
+        const claimed = loadClaimedAchievements(user?.id);
         claimed.add(id);
-        if (id !== 'daily_login') saveClaimedAchievements(claimed);
-        else saveLastDailyLogin(new Date().toISOString().split('T')[0]);
+        if (id !== 'daily_login') saveClaimedAchievements(user?.id, claimed);
+        else saveLastDailyLogin(user?.id, new Date().toISOString().split('T')[0]);
         
         set(state => ({
             achievements: state.achievements.map(a => a.id === id ? { ...a, status: 'COMPLETED' } : a)

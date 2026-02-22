@@ -3,7 +3,7 @@ import { useStore } from '../store';
 import { PixelCard, PixelButton } from '../components/ui/PixelComponents';
 import { ThemePreview } from '../components/ui/ThemePreview';
 import { THEME_CONFIGS } from '../utils/themes';
-import { ShoppingBag, Check } from 'lucide-react';
+import { ShoppingBag, Check, Coins } from 'lucide-react';
 
 export const Shop: React.FC = () => {
   const { user, shopItems, buyItem, equipItem, fetchShopItems } = useStore();
@@ -28,7 +28,7 @@ export const Shop: React.FC = () => {
                 <p className="text-gray-600 dark:text-gray-400">Spend your hard-earned XP!</p>
             </div>
             <div className="bg-white dark:bg-gray-800 border-2 border-black dark:border-white px-6 py-3 shadow-pixel flex items-center gap-3">
-                <span className="material-icons text-primary text-3xl">monetization_on</span>
+                <Coins className="text-primary w-8 h-8" strokeWidth={2.5} />
                 <span className="text-3xl font-bold">{user?.points || 0} XP</span>
             </div>
         </header>
