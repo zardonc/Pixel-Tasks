@@ -1,6 +1,7 @@
 import { type Rule, type GamificationEvent, EventType } from './rules/BaseRule.js';
 import { TaskCompletionRule } from './rules/TaskCompletionRule.js';
 import { DailyLoginRule } from './rules/DailyLoginRule.js';
+import { GameSessionRule } from './rules/GameSessionRule.js';
 import { configService } from '../config/config.service.js';
 
 class XPEngine {
@@ -14,6 +15,7 @@ class XPEngine {
     this.asyncRules.push(taskRule);
 
     this.registerRule(new DailyLoginRule());
+    this.registerRule(new GameSessionRule());
   }
 
   registerRule(rule: Rule) {

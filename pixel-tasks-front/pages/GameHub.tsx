@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useStore } from '../store';
 import { PixelCard, PixelButton } from '../components/ui/PixelComponents';
 import { Gamepad2, Grid3X3, Bomb, Trophy, Pause } from 'lucide-react';
+import { Voxel2048 } from '../src/games/voxel-2048/Voxel2048';
 
 export const GameHub: React.FC = () => {
   const { games, fetchGames } = useStore();
@@ -21,6 +22,14 @@ export const GameHub: React.FC = () => {
       // In a real app, this would reset the game state
       setIsPaused(false);
   };
+
+  if (activeGame === '2048') {
+      return (
+          <div className="fixed inset-0 z-50 bg-[#0f172a] pt-16">
+              <Voxel2048 onQuit={() => setActiveGame(null)} />
+          </div>
+      );
+  }
 
   if (activeGame) {
       const gameInfo = games.find(g => g.id === activeGame);
