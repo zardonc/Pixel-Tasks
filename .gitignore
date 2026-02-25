@@ -36,8 +36,9 @@ Thumbs.db
 # Agentic Tool artifacts (if any local)
 .agent/
 .assets/
-.workflow-docs/
 repomix-output.xml
+.workflow-docs
+agdocs-Pixel-Tasks
 
 # Local Database
 *.db

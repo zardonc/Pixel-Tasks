@@ -2,15 +2,43 @@ import React, { useState, useEffect } from 'react';
 import { useStore } from '../store';
 import { PixelCard, PixelButton } from '../components/ui/PixelComponents';
 import { Gamepad2, Grid3X3, Bomb, Trophy, Pause } from 'lucide-react';
+import { Voxel2048 } from '../src/games/voxel-2048/Voxel2048';
 
 export const GameHub: React.FC = () => {
   const { games, fetchGames } = useStore();
   const [activeGame, setActiveGame] = useState<string | null>(null);
   const [isPaused, setIsPaused] = useState(false);
 
+  const [leaderboards, setLeaderboards] = useState<Record<string, any[]>>({});
+  const [personalScores, setPersonalScores] = useState<Record<string, number>>({});
+
   useEffect(() => {
     fetchGames();
   }, [fetchGames]);
+
+  useEffect(() => {
+     const fetchLeaderboards = async () => {
+         try {
+             const { api } = await import('../api/client');
+             const boards: Record<string, any[]> = {};
+             const pScores: Record<string, number> = {};
+             for (const game of games) {
+                 const { data } = await api.get<any[]>(`/games/leaderboard/${game.id}`);
+                 if (data && data.length > 0) boards[game.id] = data;
+
+                 const { data: pData } = await api.get<{highScore: number}>(`/games/score/${game.id}`);
+                 if (pData && pData.highScore > 0) pScores[game.id] = pData.highScore;
+             }
+             setLeaderboards(boards);
+             setPersonalScores(pScores);
+         } catch (e) {
+             console.error('Failed to load leaderboards', e);
+         }
+     };
+     if (games.length > 0) {
+         fetchLeaderboards();
+     }
+  }, [games]);
 
   const handleQuit = () => {
       setIsPaused(false);
@@ -21,6 +49,14 @@ export const GameHub: React.FC = () => {
       // In a real app, this would reset the game state
       setIsPaused(false);
   };
+
+  if (activeGame === '2048') {
+      return (
+          <div className="fixed inset-0 z-50 bg-[#0f172a] pt-16">
+              <Voxel2048 onQuit={() => setActiveGame(null)} />
+          </div>
+      );
+  }
 
   if (activeGame) {
       const gameInfo = games.find(g => g.id === activeGame);
@@ -121,7 +157,7 @@ export const GameHub: React.FC = () => {
   }
 
   return (
-    <div className="p-4 md:p-8 max-w-6xl mx-auto">
+    <div className="p-4 md:p-8 max-w-6xl mx-auto pb-20">
         <div className="mb-12 text-center md:text-left">
             <h1 className="text-4xl md:text-5xl font-bold mb-4 uppercase">Arcade Center</h1>
             <p className="text-xl text-gray-600 dark:text-gray-400">Take a break. Earn XP. Have fun.</p>
@@ -130,30 +166,40 @@ export const GameHub: React.FC = () => {
         {/* Stats Row */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
             <StatCard label="Tasks Done" value="12/15" icon={<Grid3X3 />} color="text-green-500" />
-            <StatCard label="High Score" value="24,500" icon={<Trophy />} color="text-yellow-500" />
+            <StatCard label="Total High Score" value={Object.values(personalScores).reduce((a, b) => a + b, 0).toLocaleString()} icon={<Trophy />} color="text-yellow-500" />
             <StatCard label="Streak" value="5 Days" icon={<Bomb />} color="text-red-500" />
         </div>
 
-        <h2 className="text-3xl font-bold mb-6 border-l-4 border-primary pl-4 uppercase">Available Games</h2>
+        <h2 className="text-3xl font-bold mb-6 border-l-4 border-primary pl-4 uppercase flex items-center gap-3">
+            <Gamepad2 className="text-primary w-8 h-8" /> 
+            Available Games
+        </h2>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
             {games.map(game => (
                 <div 
                     key={game.id}
-                    className="group relative bg-white dark:bg-gray-800 border-4 border-black dark:border-white shadow-pixel hover:shadow-pixel-lg hover:-translate-y-2 transition-all cursor-pointer overflow-hidden"
+                    className="group relative bg-white dark:bg-gray-800 border-4 border-black dark:border-white shadow-pixel hover:shadow-pixel-lg hover:-translate-y-2 transition-all cursor-pointer overflow-hidden flex flex-col"
                     onClick={() => setActiveGame(game.id)}
                 >
-                    <div className={`h-40 ${game.color} opacity-80 group-hover:opacity-100 transition-opacity flex items-center justify-center relative overflow-hidden`}>
+                    <div className={`h-40 ${game.color} opacity-80 group-hover:opacity-100 transition-opacity flex items-center justify-center relative overflow-hidden shrink-0`}>
                         <div className="absolute inset-0 bg-dither opacity-10"></div>
                         <Gamepad2 size={64} className="text-white drop-shadow-md transform group-hover:scale-110 transition-transform" />
                     </div>
-                    <div className="p-6">
+                    <div className="p-6 flex-1 flex flex-col">
                         <div className="flex justify-between items-start mb-2">
                             <h3 className="text-2xl font-bold uppercase">{game.name}</h3>
-                            <span className="bg-black text-white text-xs px-2 py-1 uppercase font-bold">{game.tag}</span>
+                            <div className="flex flex-col items-end gap-1">
+                                <span className="bg-black text-white text-xs px-2 py-1 uppercase font-bold">{game.tag}</span>
+                                {personalScores[game.id] !== undefined && personalScores[game.id] > 0 && (
+                                    <span className="bg-yellow-400 text-black text-[10px] px-2 py-1 uppercase font-black shadow-[2px_2px_0_0_#b45309]">
+                                        BEST: {personalScores[game.id].toLocaleString()}
+                                    </span>
+                                )}
+                            </div>
                         </div>
-                        <p className="text-gray-600 dark:text-gray-400 mb-6 text-lg">{game.description}</p>
-                        <PixelButton fullWidth className="text-sm">Play Now</PixelButton>
+                        <p className="text-gray-600 dark:text-gray-400 mb-6 text-lg flex-1">{game.description}</p>
+                        <PixelButton fullWidth className="text-sm mt-auto">Play Now</PixelButton>
                     </div>
                 </div>
             ))}
@@ -166,6 +212,48 @@ export const GameHub: React.FC = () => {
                  <h3 className="text-2xl font-bold uppercase text-gray-500">Coming Soon</h3>
             </div>
         </div>
+
+        {/* Global Leaderboards Section */}
+        {Object.keys(leaderboards).length > 0 && (
+            <>
+                <h2 className="text-3xl font-bold mb-6 border-l-4 border-yellow-400 pl-4 uppercase flex items-center gap-3 mt-12">
+                    <Trophy className="text-yellow-400 w-8 h-8" /> 
+                    Global Leaderboards
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    {games.map(game => {
+                        const board = leaderboards[game.id];
+                        if (!board) return null;
+                        
+                        return (
+                            <div key={`leaderboard-${game.id}`} className="bg-white dark:bg-gray-800 border-4 border-black dark:border-white shadow-pixel flex flex-col overflow-hidden">
+                                <div className={`p-4 ${game.color} text-white font-bold text-xl uppercase border-b-4 border-black dark:border-white flex items-center gap-2`}>
+                                    <Trophy className="w-5 h-5 text-yellow-300" />
+                                    {game.name} Top 10
+                                </div>
+                                <div className="p-0">
+                                    {board.map((entry, idx) => (
+                                        <div key={entry.userId} className={`flex items-center justify-between p-4 border-b-2 border-gray-100 dark:border-gray-700 last:border-b-0 ${idx === 0 ? 'bg-yellow-50 dark:bg-yellow-900/20' : idx === 1 ? 'bg-gray-50 dark:bg-gray-800/50' : idx === 2 ? 'bg-amber-50 dark:bg-amber-900/10' : ''}`}>
+                                            <div className="flex items-center gap-3">
+                                                <span className={`font-bold text-lg w-6 ${idx === 0 ? 'text-yellow-500' : idx === 1 ? 'text-gray-400' : idx === 2 ? 'text-amber-600' : 'text-gray-400'}`}>
+                                                    #{idx + 1}
+                                                </span>
+                                                <span className="font-bold text-lg truncate max-w-[120px]">
+                                                    {entry.name || 'Anonymous'}
+                                                </span>
+                                            </div>
+                                            <span className="font-black text-xl text-primary">
+                                                {entry.highScore.toLocaleString()}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </>
+        )}
     </div>
   );
 };

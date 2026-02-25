@@ -38,6 +38,7 @@ interface AppState {
   toggleDarkMode: () => void;
   addXp: (amount: number) => void;
   claimAchievement: (id: string) => Promise<void>; 
+  submitGameScore: (gameId: string, score: number) => Promise<void>;
 }
 
 const INITIAL_TASKS: Task[] = [];
@@ -292,6 +293,22 @@ export const useStore = create<AppState>((set, get) => ({
       } catch (e) {
           console.error("Claim failed", e);
           throw e;
+      }
+  },
+
+  submitGameScore: async (gameId, score) => {
+      try {
+          const { data } = await api.post<{ message: string, points?: number, level?: number }>('/games/score', { gameId, score });
+          
+          const { user } = get();
+          if (user && data.points !== undefined && data.level !== undefined) {
+             // Only update if points differ from current
+             if (user.points !== data.points) {
+                 set({ user: { ...user, points: data.points, level: data.level } });
+             }
+          }
+      } catch (e) {
+          console.error("Failed to submit game score", e);
       }
   }
 }));
