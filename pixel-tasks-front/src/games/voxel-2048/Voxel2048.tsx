@@ -59,7 +59,26 @@ export const Voxel2048: React.FC<{ onQuit: () => void }> = ({ onQuit }) => {
 
     const [bestScore, setBestScore] = React.useState(0);
 
-    // Sync best score
+    // Fetch user's persistent high score on load
+    useEffect(() => {
+        const fetchHighScore = async () => {
+            try {
+                // api.ts is already in store.ts, import it here if needed. 
+                // We'll import api from client instead. Wait, 'api' isn't imported.
+                // It's better to fetch via store or just use fetch natively if api is missing.
+                const { api } = await import('../../../api/client');
+                const { data } = await api.get<{ highScore: number }>('/games/score/2048');
+                if (data && data.highScore > 0) {
+                    setBestScore(data.highScore);
+                }
+            } catch (e) {
+                console.error("Failed to load high score", e);
+            }
+        };
+        fetchHighScore();
+    }, []);
+
+    // Sync best score during gameplay
     useEffect(() => {
         if (gameState.score > bestScore) setBestScore(gameState.score);
     }, [gameState.score, bestScore]);

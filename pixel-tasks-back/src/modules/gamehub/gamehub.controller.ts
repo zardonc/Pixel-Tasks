@@ -4,6 +4,7 @@ import { games } from '../../db/schema.js';
 import { eq } from 'drizzle-orm';
 import { authMiddleware } from '../../middlewares/auth.js';
 import { gamificationService } from '../gamification/gamification.service.js';
+import { gameHubService } from './gamehub.service.js';
 import { EventType } from '../gamification/rules/BaseRule.js';
 import TSID from 'tsid';
 
@@ -36,6 +37,8 @@ gameHubController.post('/score', authMiddleware, async (c) => {
 
         const id = typeof TSID.next() === 'string' ? TSID.next() : String(TSID.next());
 
+        await gameHubService.updateHighScoreIfGreater(user.id, gameId, score);
+
         const updatedUser = await gamificationService.processEvent(
             user.id,
             EventType.GAME_SESSION_COMPLETE,
@@ -56,5 +59,30 @@ gameHubController.post('/score', authMiddleware, async (c) => {
     } catch (err: any) {
         console.error('[GameHub POST /score] Failed:', err);
         return c.json({ error: err.message }, 500);
+    }
+});
+
+// GET /games/score/:gameId — Get the current user's high score for a specific game
+gameHubController.get('/score/:gameId', authMiddleware, async (c) => {
+    try {
+        const user = c.get('user');
+        const gameId = c.req.param('gameId');
+        const highScore = await gameHubService.getUserHighScore(user.id, gameId);
+        return c.json({ highScore });
+    } catch (err: any) {
+        console.error('[GameHub GET /score/:gameId] Failed:', err);
+        return c.json({ error: 'Failed to fetch user high score' }, 500);
+    }
+});
+
+// GET /games/leaderboard/:gameId — Get top 10 high scores for a specific game
+gameHubController.get('/leaderboard/:gameId', async (c) => {
+    try {
+        const gameId = c.req.param('gameId');
+        const leaderboard = await gameHubService.getTop10HighScores(gameId);
+        return c.json(leaderboard);
+    } catch (err: any) {
+        console.error('[GameHub GET /leaderboard/:gameId] Failed:', err);
+        return c.json({ error: 'Failed to fetch leaderboard' }, 500);
     }
 });
