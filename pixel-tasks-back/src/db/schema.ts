@@ -226,3 +226,75 @@ export const gameHighScores = sqliteTable(
     };
   },
 );
+
+// Games Table
+export const games = sqliteTable('games', {
+  id: text('id').primaryKey(), // TSID
+  name: text('name').notNull(),
+  description: text('description'),
+  tag: text('tag'),
+  color: text('color'),
+  isVisible: integer('is_visible', { mode: 'boolean' }).default(true).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`(strftime('%s', 'now'))`),
+});
+
+// Shop Items Table
+export const shopItems = sqliteTable('shop_items', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  description: text('description'),
+  type: text('type').notNull(),
+  cost: integer('cost').notNull(),
+  image: text('image'),
+  isVisible: integer('is_visible', { mode: 'boolean' }).default(true).notNull(),
+  check: text('check').default('LOCKED'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`(strftime('%s', 'now'))`),
+});
+
+// Game Config Table
+export const gameConfig = sqliteTable('game_config', {
+  key: text('key').primaryKey(),
+  value: text('value').notNull(),
+  version: integer('version').default(1).notNull(),
+  updatedBy: text('updated_by').references(() => users.id),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).default(sql`(strftime('%s', 'now'))`),
+});
+
+// Achievements Table
+export const achievements = sqliteTable('achievements', {
+  id: text('id').primaryKey(),
+  title: text('title').notNull(),
+  description: text('description').notNull(),
+  icon: text('icon').default('trophy'),
+  reward: integer('reward').notNull(),
+  maxProgress: integer('max_progress').default(1).notNull(),
+  isVisible: integer('is_visible', { mode: 'boolean' }).default(true).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`(strftime('%s', 'now'))`),
+});
+
+// Shop Transactions Table
+export const shopTransactions = sqliteTable('shop_transactions', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id),
+  itemId: text('item_id').notNull().references(() => shopItems.id),
+  pricePaid: integer('price_paid').notNull(),
+  purchasedAt: integer('purchased_at', { mode: 'timestamp' }).default(sql`(strftime('%s', 'now'))`),
+});
+
+// User Items Table
+export const userItems = sqliteTable('user_items', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id),
+  itemId: text('item_id').notNull().references(() => shopItems.id),
+  isEquipped: integer('is_equipped', { mode: 'boolean' }).default(false).notNull(),
+  purchasedAt: integer('purchased_at', { mode: 'timestamp' }).default(sql`(strftime('%s', 'now'))`),
+});
+
+// Game High Scores Table
+export const gameHighScores = sqliteTable('game_high_scores', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  gameId: text('game_id').notNull(),
+  highScore: integer('high_score').default(0).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).default(sql`(strftime('%s', 'now'))`).notNull(),
+});

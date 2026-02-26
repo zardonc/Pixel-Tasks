@@ -83,3 +83,75 @@ export const gameConfig = pgTable('game_config', {
   updatedBy: text('updated_by').references(() => users.id),
   updatedAt: timestamp('updated_at').defaultNow(),
 });
+
+// Games Table
+export const games = pgTable('games', {
+  id: text('id').primaryKey(), // TSID
+  name: text('name').notNull(),
+  description: text('description'),
+  tag: text('tag'),
+  color: text('color'),
+  isVisible: boolean('is_visible').default(true).notNull(),
+  createdAt: timestamp('created_at', { mode: 'date' }).defaultNow(),
+});
+
+// Shop Items Table
+export const shopItems = pgTable('shop_items', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  description: text('description'),
+  type: text('type').notNull(),
+  cost: integer('cost').notNull(),
+  image: text('image'),
+  isVisible: boolean('is_visible').default(true).notNull(),
+  check: text('check').default('LOCKED'),
+  createdAt: timestamp('created_at', { mode: 'date' }).defaultNow(),
+});
+
+// Game Config Table
+export const gameConfig = pgTable('game_config', {
+  key: text('key').primaryKey(),
+  value: text('value').notNull(),
+  version: integer('version').default(1).notNull(),
+  updatedBy: text('updated_by').references(() => users.id),
+  updatedAt: timestamp('updated_at', { mode: 'date' }).defaultNow(),
+});
+
+// Achievements Table
+export const achievements = pgTable('achievements', {
+  id: text('id').primaryKey(),
+  title: text('title').notNull(),
+  description: text('description').notNull(),
+  icon: text('icon').default('trophy'),
+  reward: integer('reward').notNull(),
+  maxProgress: integer('max_progress').default(1).notNull(),
+  isVisible: boolean('is_visible').default(true).notNull(),
+  createdAt: timestamp('created_at', { mode: 'date' }).defaultNow(),
+});
+
+// Shop Transactions Table
+export const shopTransactions = pgTable('shop_transactions', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id),
+  itemId: text('item_id').notNull().references(() => shopItems.id),
+  pricePaid: integer('price_paid').notNull(),
+  purchasedAt: timestamp('purchased_at', { mode: 'date' }).defaultNow(),
+});
+
+// User Items Table
+export const userItems = pgTable('user_items', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id),
+  itemId: text('item_id').notNull().references(() => shopItems.id),
+  isEquipped: boolean('is_equipped').default(false).notNull(),
+  purchasedAt: timestamp('purchased_at', { mode: 'date' }).defaultNow(),
+});
+
+// Game High Scores Table
+export const gameHighScores = pgTable('game_high_scores', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  gameId: text('game_id').notNull(),
+  highScore: integer('high_score').default(0).notNull(),
+  updatedAt: timestamp('updated_at', { mode: 'date' }).defaultNow().notNull(),
+});
