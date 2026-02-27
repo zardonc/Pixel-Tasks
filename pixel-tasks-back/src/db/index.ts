@@ -4,6 +4,7 @@ dotenv.config();
 
 const rawMode = process.env.DB_MODE || process.env.db_mode || 'sqlite';
 const DB_MODE = rawMode.toLowerCase();
+console.log(`[DB INIT] rawMode=${rawMode}, DB_MODE=${DB_MODE}`);
 
 let db: any;
 

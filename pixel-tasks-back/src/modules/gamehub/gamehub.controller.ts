@@ -13,11 +13,13 @@ export const gameHubController = new Hono();
 // GET /games — List all visible games
 gameHubController.get('/', async (c) => {
   try {
+    console.log('[GameHub] Attempting to fetch games from DB...');
     const visibleGames = await db
       .select()
       .from(games)
       .where(eq(games.isVisible, true));
       
+    console.log(`[GameHub] Fetched ${visibleGames.length} games.`);
     return c.json(visibleGames);
   } catch (err: any) {
     console.error('[GameHub] Failed to fetch games:', err);
