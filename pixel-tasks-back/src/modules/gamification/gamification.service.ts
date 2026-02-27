@@ -85,16 +85,16 @@ export class GamificationService {
     // 4. Synchronous transaction for DB writes (better-sqlite3 requirement)
     const logId = TSID.next();
 
-    const [updatedUser] = db.transaction((tx: any) => {
-      tx.insert(pointsLog).values({
+    const [updatedUser] = await db.transaction(async (tx: any) => {
+      await tx.insert(pointsLog).values({
         id: logId,
         userId,
         eventType: logEventType,
         eventId,
         pointsDelta,
-      }).run();
+      });
 
-      const [updated] = tx
+      const [updated] = await tx
         .update(users)
         .set({
           points: newPoints,
@@ -102,8 +102,7 @@ export class GamificationService {
           version: currentUser.version + 1,
         })
         .where(and(eq(users.id, userId), eq(users.version, currentUser.version)))
-        .returning()
-        .all();
+        .returning();
 
       if (!updated) {
         throw new Error(`Failed to update points for user ${userId} (Concurrency Error)`);

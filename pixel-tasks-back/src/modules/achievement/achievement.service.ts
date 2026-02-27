@@ -64,8 +64,8 @@ export class AchievementService {
     // 4. Synchronous transaction for DB writes (better-sqlite3 requirement)
     const logId = TSID.next();
 
-    const [updatedUser] = db.transaction((tx: any) => {
-      const [updated] = tx
+    const [updatedUser] = await db.transaction(async (tx: any) => {
+      const [updated] = await tx
         .update(users)
         .set({
           points: newPoints,
@@ -73,18 +73,17 @@ export class AchievementService {
           version: currentUser.version + 1,
         })
         .where(and(eq(users.id, userId), eq(users.version, currentUser.version)))
-        .returning()
-        .all();
+        .returning();
 
       if (!updated) throw new Error('Concurrency conflict — please retry');
 
-      tx.insert(pointsLog).values({
+      await tx.insert(pointsLog).values({
         id: logId,
         userId,
         eventType: 'ACHIEVEMENT_CLAIM',
         eventId: eventId,
         pointsDelta: reward,
-      }).run();
+      });
 
       return [updated];
     });

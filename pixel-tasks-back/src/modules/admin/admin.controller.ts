@@ -141,6 +141,6 @@ adminController.put('/achievements/:id', async (c) => {
 adminController.delete('/achievements/:id', async (c) => {
   const id = c.req.param('id');
   // We probably shouldn't fully delete if users have claimed it... but for now:
-  await db.delete(achievements).where(eq(achievements.id, id)).run();
+  await db.delete(achievements).where(eq(achievements.id, id));
   return c.json({ success: true });
 });

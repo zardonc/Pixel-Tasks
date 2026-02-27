@@ -49,10 +49,10 @@ export const gameHubService = {
       .onConflictDoUpdate({
         target: [gameHighScores.userId, gameHighScores.gameId],
         set: {
-          highScore: sql`MAX(${gameHighScores.highScore}, excluded.high_score)`,
+          highScore: sql`GREATEST(${gameHighScores.highScore}, EXCLUDED.high_score)`,
           updatedAt: sql`CASE 
-            WHEN excluded.high_score > ${gameHighScores.highScore} 
-            THEN excluded.updated_at 
+            WHEN EXCLUDED.high_score > ${gameHighScores.highScore} 
+            THEN EXCLUDED.updated_at 
             ELSE ${gameHighScores.updatedAt} 
           END`
         }
