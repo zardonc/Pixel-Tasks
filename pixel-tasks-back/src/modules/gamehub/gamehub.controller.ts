@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { db } from '../../db/index.js';
-import { games } from '../../db/schema.pg.js';
+import { games } from '../../db/schema.js';
 import { eq } from 'drizzle-orm';
 import { authMiddleware } from '../../middlewares/auth.js';
 import { gamificationService } from '../gamification/gamification.service.js';

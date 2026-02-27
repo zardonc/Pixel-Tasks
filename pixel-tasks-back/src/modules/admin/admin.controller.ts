@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { adminOnly } from '../../middlewares/auth.js';
 import { configService } from '../config/config.service.js';
 import { db } from '../../db/index.js';
-import { gameConfig, shopItems, games, achievements } from '../../db/schema.pg.js';
+import { gameConfig, shopItems, games, achievements } from '../../db/schema.js';
 import { eq } from 'drizzle-orm';
 import TSID from 'tsid';
 

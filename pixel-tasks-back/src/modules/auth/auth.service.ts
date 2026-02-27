@@ -1,5 +1,5 @@
 import { db } from '../../db/index.js';
-import { users, pointsLog } from '../../db/schema.pg.js';
+import { users, pointsLog } from '../../db/schema.js';
 import { eq, and } from 'drizzle-orm';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';

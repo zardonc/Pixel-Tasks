@@ -1,5 +1,5 @@
 import { db } from '../../db/index.js';
-import { users, pointsLog, shopItems, userItems, shopTransactions } from '../../db/schema.pg.js';
+import { users, pointsLog, shopItems, userItems, shopTransactions } from '../../db/schema.js';
 import { eq, and } from 'drizzle-orm';
 import TSID from 'tsid';
 import { xpEngine } from '../gamification/XPEngine.js';

@@ -27,7 +27,7 @@ if (DB_MODE === 'postgres') {
     // ── SQLite (Local Dev) ───────────────────────────────
     const { drizzle } = await import('drizzle-orm/better-sqlite3');
     const Database = (await import('better-sqlite3')).default;
-    const schema = await import('./schema.js');
+    const schema = await import('./schema.sqlite.js');
 
     const DB_PATH = process.env.DATABASE_URL || 'local.db';
     const sqlite = new Database(DB_PATH);

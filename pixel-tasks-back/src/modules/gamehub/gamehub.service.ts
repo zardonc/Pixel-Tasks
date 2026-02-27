@@ -1,5 +1,5 @@
 import { db } from '../../db/index.js';
-import { gameHighScores, users } from '../../db/schema.pg.js';
+import { gameHighScores, users } from '../../db/schema.js';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import TSID from 'tsid';
 

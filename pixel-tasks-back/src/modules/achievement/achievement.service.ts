@@ -1,10 +1,10 @@
 import { db } from '../../db/index.js';
-import { users, pointsLog } from '../../db/schema.pg.js';
+import { users, pointsLog } from '../../db/schema.js';
 import { eq, and } from 'drizzle-orm';
 import TSID from 'tsid';
 import { xpEngine } from '../gamification/XPEngine.js';
 
-import { achievements } from '../../db/schema.pg.js';
+import { achievements } from '../../db/schema.js';
 
 export class AchievementService {
   /**

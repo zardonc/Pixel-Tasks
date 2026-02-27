@@ -1,5 +1,5 @@
 import { db } from '../../db/index.js';
-import { gameConfig } from '../../db/schema.pg.js';
+import { gameConfig } from '../../db/schema.js';
 import { eq } from 'drizzle-orm';
 
 // ── XP Rules Type ──

@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { achievementService } from './achievement.service.js';
 import { db } from '../../db/index.js';
-import { achievements } from '../../db/schema.pg.js';
+import { achievements } from '../../db/schema.js';
 import { eq } from 'drizzle-orm';
 
 export const achievementController = new Hono();

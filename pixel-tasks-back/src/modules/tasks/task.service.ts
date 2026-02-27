@@ -1,5 +1,5 @@
 import { db } from '../../db/index.js';
-import { tasks } from '../../db/schema.pg.js';
+import { tasks } from '../../db/schema.js';
 import { eq, and } from 'drizzle-orm';
 import TSID from 'tsid';
 import { configService } from '../config/config.service.js';
