@@ -2,7 +2,8 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const DB_MODE = process.env.DB_MODE || 'sqlite';
+const rawMode = process.env.DB_MODE || process.env.db_mode || 'sqlite';
+const DB_MODE = rawMode.toLowerCase();
 
 let db: any;
 
