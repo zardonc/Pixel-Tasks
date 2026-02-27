@@ -108,14 +108,6 @@ export const shopItems = pgTable('shop_items', {
   createdAt: timestamp('created_at', { mode: 'date' }).defaultNow(),
 });
 
-// Game Config Table
-export const gameConfig = pgTable('game_config', {
-  key: text('key').primaryKey(),
-  value: text('value').notNull(),
-  version: integer('version').default(1).notNull(),
-  updatedBy: text('updated_by').references(() => users.id),
-  updatedAt: timestamp('updated_at', { mode: 'date' }).defaultNow(),
-});
 
 // Achievements Table
 export const achievements = pgTable('achievements', {
