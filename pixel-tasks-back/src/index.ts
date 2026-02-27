@@ -59,6 +59,33 @@ app.get('/', (c) => {
   return c.text('Pixel Tasks Backend is running (Phase 1)');
 });
 
+// Debug
+import { db } from './db/index.js';
+app.get('/debug', async (c) => {
+  try {
+    const isPostgres = !!process.env.DB_MODE && process.env.DB_MODE.toLowerCase() === 'postgres';
+    
+    // Attempt to do a raw query relying on the injected db
+    let dbType = 'unknown';
+    if (db && db.$client) {
+        dbType = db.$client.constructor.name || 'postgres-client';
+    } else if (db && typeof db.run === 'function') {
+        dbType = 'sqlite';
+    }
+
+    return c.json({
+      db_mode_env: process.env.DB_MODE || 'undefined',
+      db_mode_env_lower: process.env.db_mode || 'undefined',
+      dbType,
+      supabaseUrlSet: !!process.env.SUPABASE_DB_URL,
+      // If postgres, get counts, else print "not postgres"
+      gamesCount: isPostgres ? (await db.execute('SELECT COUNT(*) FROM games'))[0]?.count : 'N/A'
+    });
+  } catch (err: any) {
+    return c.json({ error: err.message, stack: err.stack }, 500);
+  }
+});
+
 if (!process.env.VERCEL) {
   const port = process.env.PORT ? parseInt(process.env.PORT) : 3000;
   console.log(`Server is running on port ${port}`);
