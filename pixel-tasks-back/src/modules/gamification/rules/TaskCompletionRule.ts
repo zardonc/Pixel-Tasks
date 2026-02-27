@@ -9,7 +9,7 @@ export class TaskCompletionRule implements Rule {
   }
 
   calculateReward(event: GamificationEvent): number {
-    // Synchronous fallback â€” actual calculation done via calculateRewardAsync
+    // Synchronous fallback â€?actual calculation done via calculateRewardAsync
     return 0;
   }
 

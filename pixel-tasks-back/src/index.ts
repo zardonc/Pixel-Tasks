@@ -22,7 +22,7 @@ import { authMiddleware } from './middlewares/auth.js';
 app.use('/tasks/*', authMiddleware);
 app.route('/tasks', taskController);
 
-// Config (XP rules â€” admin-managed)
+// Config (XP rules â€?admin-managed)
 import { configController } from './modules/config/config.controller.js';
 app.use('/config/*', authMiddleware);
 app.route('/config', configController);

@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { db } from '../../db/index.js';
-import { games } from '../../db/schema.js';
+import { games } from '../../db/schema.pg.js';
 import { eq } from 'drizzle-orm';
 import { authMiddleware } from '../../middlewares/auth.js';
 import { gamificationService } from '../gamification/gamification.service.js';
@@ -10,7 +10,7 @@ import TSID from 'tsid';
 
 export const gameHubController = new Hono();
 
-// GET /games â€” List all visible games
+// GET /games â€?List all visible games
 gameHubController.get('/', async (c) => {
   try {
     console.log('[GameHub] Attempting to fetch games from DB...');
@@ -27,7 +27,7 @@ gameHubController.get('/', async (c) => {
   }
 });
 
-// POST /games/score â€” Submit a completely game session score and earn XP
+// POST /games/score â€?Submit a completely game session score and earn XP
 gameHubController.post('/score', authMiddleware, async (c) => {
     try {
         const user = c.get('user');
@@ -64,7 +64,7 @@ gameHubController.post('/score', authMiddleware, async (c) => {
     }
 });
 
-// GET /games/score/:gameId â€” Get the current user's high score for a specific game
+// GET /games/score/:gameId â€?Get the current user's high score for a specific game
 gameHubController.get('/score/:gameId', authMiddleware, async (c) => {
     try {
         const user = c.get('user');
@@ -77,7 +77,7 @@ gameHubController.get('/score/:gameId', authMiddleware, async (c) => {
     }
 });
 
-// GET /games/leaderboard/:gameId â€” Get top 10 high scores for a specific game
+// GET /games/leaderboard/:gameId â€?Get top 10 high scores for a specific game
 gameHubController.get('/leaderboard/:gameId', async (c) => {
     try {
         const gameId = c.req.param('gameId');

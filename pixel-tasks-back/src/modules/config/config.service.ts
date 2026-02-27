@@ -1,5 +1,5 @@
 import { db } from '../../db/index.js';
-import { gameConfig } from '../../db/schema.js';
+import { gameConfig } from '../../db/schema.pg.js';
 import { eq } from 'drizzle-orm';
 
 // ── XP Rules Type ──
@@ -32,7 +32,7 @@ class ConfigService {
   private cache: XpRules | null = null;
 
   /**
-   * Read XP config — returns cached value, falls back to DB, auto-seeds defaults.
+   * Read XP config �?returns cached value, falls back to DB, auto-seeds defaults.
    */
   async getXpConfig(): Promise<XpRules> {
     if (this.cache) return this.cache;

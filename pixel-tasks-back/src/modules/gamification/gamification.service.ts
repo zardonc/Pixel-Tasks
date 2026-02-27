@@ -1,5 +1,5 @@
 import { db } from '../../db/index.js';
-import { users, pointsLog } from '../../db/schema.js';
+import { users, pointsLog } from '../../db/schema.pg.js';
 import { eq, and, sql, gte } from 'drizzle-orm';
 import TSID from 'tsid';
 import { xpEngine } from './XPEngine.js';
@@ -18,7 +18,7 @@ export class GamificationService {
       timestamp: new Date(),
     };
 
-    // 1. Calculate XP (async â€” reads from config)
+    // 1. Calculate XP (async â€?reads from config)
     let pointsDelta = await xpEngine.calculateXP(event);
     if (pointsDelta === 0) return null;
 
@@ -47,7 +47,7 @@ export class GamificationService {
         console.log(`[Gamification] Daily High XP cap reached for user ${userId}. Skipping.`);
         pointsDelta = 0;
       } else if (pointsDelta > remaining) {
-        console.log(`[Gamification] Clamping High XP: ${pointsDelta} â†’ ${remaining} (cap: ${config.dailyHighXpCap})`);
+        console.log(`[Gamification] Clamping High XP: ${pointsDelta} â†?${remaining} (cap: ${config.dailyHighXpCap})`);
         pointsDelta = remaining;
       }
 

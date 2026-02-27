@@ -1,10 +1,10 @@
 import { db } from '../../db/index.js';
-import { users, pointsLog } from '../../db/schema.js';
+import { users, pointsLog } from '../../db/schema.pg.js';
 import { eq, and } from 'drizzle-orm';
 import TSID from 'tsid';
 import { xpEngine } from '../gamification/XPEngine.js';
 
-import { achievements } from '../../db/schema.js';
+import { achievements } from '../../db/schema.pg.js';
 
 export class AchievementService {
   /**
@@ -29,7 +29,7 @@ export class AchievementService {
       eventId = `daily_login_${today}`;
     }
 
-    // 2. Idempotency â€” check if this achievement was already claimed
+    // 2. Idempotency â€?check if this achievement was already claimed
     const existing = await db
       .select()
       .from(pointsLog)
@@ -57,7 +57,7 @@ export class AchievementService {
 
     if (!currentUser) throw new Error('User not found');
 
-    // 3. Calculate new level (async â€” must be done before sync transaction)
+    // 3. Calculate new level (async â€?must be done before sync transaction)
     const newPoints = currentUser.points + reward;
     const newLevel = await xpEngine.calculateLevel(newPoints);
 
@@ -75,7 +75,7 @@ export class AchievementService {
         .where(and(eq(users.id, userId), eq(users.version, currentUser.version)))
         .returning();
 
-      if (!updated) throw new Error('Concurrency conflict â€” please retry');
+      if (!updated) throw new Error('Concurrency conflict â€?please retry');
 
       await tx.insert(pointsLog).values({
         id: logId,

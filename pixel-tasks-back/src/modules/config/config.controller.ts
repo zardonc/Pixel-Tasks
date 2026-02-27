@@ -4,13 +4,13 @@ import { adminOnly } from '../../middlewares/auth.js';
 
 export const configController = new Hono();
 
-// GET /config/xp â€” Any authenticated user can read the XP config
+// GET /config/xp â€?Any authenticated user can read the XP config
 configController.get('/xp', async (c) => {
   const config = await configService.getXpConfig();
   return c.json(config);
 });
 
-// PUT /config/xp â€” Admin only: update XP rules
+// PUT /config/xp â€?Admin only: update XP rules
 configController.put('/xp', adminOnly, async (c) => {
   const user = c.get('user');
   const body = await c.req.json();

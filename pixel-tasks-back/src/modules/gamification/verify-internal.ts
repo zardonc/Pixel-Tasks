@@ -42,7 +42,7 @@ async function verifyRuleEngine() {
   console.log(`Scenario 3 (High Task): Expected 60, Got ${xp3}`);
   if (xp3 !== 60) throw new Error(`Scenario 3 Failed: expected 60, got ${xp3}`);
 
-  // Scenario 4: On-time bonus â€” Task with dueDate 60 min in the future
+  // Scenario 4: On-time bonus â€?Task with dueDate 60 min in the future
   const now = new Date();
   const dueIn60Min = new Date(now.getTime() + 60 * 60000);
   const event4 = {
@@ -57,7 +57,7 @@ async function verifyRuleEngine() {
     timestamp: now
   };
   const xp4 = await xpEngine.calculateXP(event4);
-  // Expected: 25 * (1 + 0.0025 * 60) = 25 * 1.15 = 28.75 â†’ floor = 28
+  // Expected: 25 * (1 + 0.0025 * 60) = 25 * 1.15 = 28.75 â†?floor = 28
   console.log(`Scenario 4 (Medium + 60min early): Expected 28, Got ${xp4}`);
   if (xp4 !== 28) throw new Error(`Scenario 4 Failed: expected 28, got ${xp4}`);
 
@@ -76,13 +76,13 @@ async function verifyRuleEngine() {
 
   // Scenario 6: Level progress
   const progress = await xpEngine.getLevelProgress(350);
-  // 350 XP = Level 2 (threshold 200). Band = 200â†’500 (300 XP). Progress = 150/300 = 50%
+  // 350 XP = Level 2 (threshold 200). Band = 200â†?00 (300 XP). Progress = 150/300 = 50%
   console.log(`Level progress at 350 XP: ${progress.current}/${progress.required} (${progress.percentage}%)`);
   if (progress.current !== 150 || progress.required !== 300 || progress.percentage !== 50) {
     throw new Error(`Progress calc failed: expected 150/300/50%, got ${progress.current}/${progress.required}/${progress.percentage}%`);
   }
 
-  // Scenario 7: Daily Login (unchanged â€” 100 XP flat)
+  // Scenario 7: Daily Login (unchanged â€?100 XP flat)
   const event7 = {
     type: EventType.DAILY_LOGIN,
     userId: 'user-1',
@@ -93,7 +93,7 @@ async function verifyRuleEngine() {
   console.log(`Scenario 7 (Daily Login): Expected 100, Got ${xp7}`);
   if (xp7 !== 100) throw new Error(`Scenario 7 Failed: expected 100, got ${xp7}`);
 
-  console.log('--- XP Rule Engine Verification Passed âœ“ ---');
+  console.log('--- XP Rule Engine Verification Passed âœ?---');
 }
 
 verifyRuleEngine().catch((err) => {

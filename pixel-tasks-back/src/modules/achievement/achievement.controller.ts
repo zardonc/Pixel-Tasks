@@ -1,12 +1,12 @@
 import { Hono } from 'hono';
 import { achievementService } from './achievement.service.js';
 import { db } from '../../db/index.js';
-import { achievements } from '../../db/schema.js';
+import { achievements } from '../../db/schema.pg.js';
 import { eq } from 'drizzle-orm';
 
 export const achievementController = new Hono();
 
-// GET /achievements â€” List all visible achievements
+// GET /achievements â€?List all visible achievements
 achievementController.get('/', async (c) => {
   try {
     // Determine if we should show hidden? For now only visible
@@ -20,7 +20,7 @@ achievementController.get('/', async (c) => {
   }
 });
 
-// POST /achievements/claim â€” Claim an achievement reward (adds XP, idempotent)
+// POST /achievements/claim â€?Claim an achievement reward (adds XP, idempotent)
 achievementController.post('/claim', async (c) => {
   const user = c.get('user');
   const { achievementId } = await c.req.json();

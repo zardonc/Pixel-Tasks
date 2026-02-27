@@ -1,5 +1,5 @@
 import { db } from '../../db/index.js';
-import { users } from '../../db/schema.js';
+import { users } from '../../db/schema.pg.js';
 import { eq } from 'drizzle-orm';
 import { HTTPException } from 'hono/http-exception';
 import bcrypt from 'bcryptjs';

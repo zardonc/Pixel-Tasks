@@ -1,5 +1,5 @@
 import { db } from '../../db/index.js';
-import { users, pointsLog, shopItems, userItems, shopTransactions } from '../../db/schema.js';
+import { users, pointsLog, shopItems, userItems, shopTransactions } from '../../db/schema.pg.js';
 import { eq, and } from 'drizzle-orm';
 import TSID from 'tsid';
 import { xpEngine } from '../gamification/XPEngine.js';
@@ -60,7 +60,7 @@ export class ShopService {
       if (currentUser.points < cost) throw new Error('Insufficient XP');
     }
 
-    // 3. Calculate new level (async â€” must be done before sync transaction)
+    // 3. Calculate new level (async â€?must be done before sync transaction)
     // If admin buys, cost is effectively 0 for them (or we deduct 0).
     const pointsToDeduct = isAdmin ? 0 : cost;
     const newPoints = currentUser.points - pointsToDeduct;
@@ -93,7 +93,7 @@ export class ShopService {
           .where(and(eq(users.id, userId), eq(users.version, currentUser.version)))
           .returning();
           
-        if (!res) throw new Error('Concurrency conflict â€” please retry');
+        if (!res) throw new Error('Concurrency conflict â€?please retry');
         updated = res;
       }
 

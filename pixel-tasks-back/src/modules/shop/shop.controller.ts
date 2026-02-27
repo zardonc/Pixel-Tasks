@@ -3,7 +3,7 @@ import { shopService } from './shop.service.js';
 
 export const shopController = new Hono();
 
-// GET /shop/items â€” List all visible shop items
+// GET /shop/items â€?List all visible shop items
 shopController.get('/items', async (c) => {
   const user = c.get('user');
   try {
@@ -14,7 +14,7 @@ shopController.get('/items', async (c) => {
   }
 });
 
-// POST /shop/buy â€” Purchase an item (deducts XP)
+// POST /shop/buy â€?Purchase an item (deducts XP)
 shopController.post('/buy', async (c) => {
   const user = c.get('user');
   const { itemId } = await c.req.json(); // Cost is looked up by service now
@@ -38,7 +38,7 @@ shopController.post('/buy', async (c) => {
   }
 });
 
-// POST /shop/equip â€” Update user inventory equipment state
+// POST /shop/equip â€?Update user inventory equipment state
 shopController.post('/equip', async (c) => {
   const user = c.get('user');
   const { itemId } = await c.req.json();
